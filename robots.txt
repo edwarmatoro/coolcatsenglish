@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://coolcatsenglish.com/sitemap.xml 
+# Permitir indexación de recursos importantes
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js
+
+# Sitemap
+Sitemap: https://coolcatsenglish.com/sitemap.xml
+
+# Crawl-delay para ser respetuoso con el servidor
+Crawl-delay: 1 

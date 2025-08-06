@@ -86,7 +86,7 @@ mi-sitio-web/
 ### Opción 2: GitHub Pages
 
 1. **Crear repositorio en GitHub**
-   ```bash
+```bash
    git init
    git add .
    git commit -m "Primer commit"
