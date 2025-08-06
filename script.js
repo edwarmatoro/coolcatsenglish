@@ -201,47 +201,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Contador animado para estadísticas
-    function animateCounter(element, target, duration = 2000) {
-        let start = 0;
-        const increment = target / (duration / 16);
-        
-        function updateCounter() {
-            start += increment;
-            if (start < target) {
-                element.textContent = Math.floor(start);
-                requestAnimationFrame(updateCounter);
-            } else {
-                element.textContent = target;
-            }
-        }
-        
-        updateCounter();
-    }
+    // Contador animado para estadísticas (comentado)
+    // function animateCounter(element, target, duration = 2000) {
+    //     let start = 15; // Empezar desde 15
+    //     const increment = (target - 15) / (duration / 16);
+    //     
+    //     function updateCounter() {
+    //         start += increment;
+    //         if (start < target) {
+    //             element.textContent = Math.floor(start) + '+';
+    //             requestAnimationFrame(updateCounter);
+    //         } else {
+    //             element.textContent = target + '+';
+    //         }
+    //     }
+    //     
+    //     updateCounter();
+    // }
     
-    // Observar estadísticas para animar contadores
-    const statsObserver = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const statNumber = entry.target.querySelector('h3');
-                const text = statNumber.textContent;
-                const number = parseInt(text.replace(/\D/g, ''));
-                
-                if (number > 0) {
-                    statNumber.textContent = '0';
-                    animateCounter(statNumber, number);
-                }
-                
-                statsObserver.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.5 });
-    
-    // Observar elementos de estadísticas
-    const statElements = document.querySelectorAll('.stat');
-    statElements.forEach(stat => {
-        statsObserver.observe(stat);
-    });
+    // Estadísticas estáticas (sin animación)
+    // const statsObserver = new IntersectionObserver(function(entries) {
+    //     entries.forEach(entry => {
+    //         if (entry.isIntersecting) {
+    //             const statNumber = entry.target.querySelector('h3');
+    //             const text = statNumber.textContent;
+    //             const number = parseInt(text.replace(/\D/g, ''));
+    //             
+    //             if (number > 0) {
+    //                     statNumber.textContent = '0';
+    //                     animateCounter(statNumber, number);
+    //                 }
+    //                 
+    //                 statsObserver.unobserve(entry.target);
+    //             }
+    //         }, { threshold: 0.5 });
+    //         
+    //         // Observar elementos de estadísticas
+    //         const statElements = document.querySelectorAll('.stat');
+    //         statElements.forEach(stat => {
+    //             statsObserver.observe(stat);
+    //         });
     
     // Efecto parallax suave para el hero
     window.addEventListener('scroll', function() {
