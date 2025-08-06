@@ -173,15 +173,19 @@
                             <p><a href="https://maps.google.com/?q=CoolCats+Baixada+de+la+Plana,+46,+Horta-Guinardó,+08032+Barcelona" target="_blank" style="color: var(--primary-color); text-decoration: none;">Ver en Google Maps</a></p>
                         </div>
                     </div>
-                    <form class="contact-form" action="mailto:info@coolcatsenglish.com" method="post" enctype="text/plain">
-                        <div class="form-group">
-                            <input type="text" name="nombre" placeholder="Nombre completo" required>
+                    <form class="contact-form" id="contactForm" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+                        <input type="hidden" name="form-name" value="contact" />
+                        <div class="form-group" style="display: none;">
+                            <input name="bot-field" />
                         </div>
                         <div class="form-group">
-                            <input type="email" name="email" placeholder="Correo electrónico" required>
+                            <input type="text" name="nombre" id="nombre" placeholder="Nombre completo" required>
                         </div>
                         <div class="form-group">
-                            <textarea name="mensaje" placeholder="Mensaje" rows="5" required></textarea>
+                            <input type="email" name="email" id="email" placeholder="Correo electrónico" required>
+                        </div>
+                        <div class="form-group">
+                            <textarea name="mensaje" id="mensaje" placeholder="Mensaje" rows="5" required></textarea>
                         </div>
                         <button type="submit" class="submit-button">Enviar Mensaje</button>
                     </form>

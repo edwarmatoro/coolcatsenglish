@@ -92,12 +92,12 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             // Obtener datos del formulario
-            const name = this.querySelector('input[type="text"]').value;
-            const email = this.querySelector('input[type="email"]').value;
-            const message = this.querySelector('textarea').value;
+            const nombre = document.getElementById('nombre').value;
+            const email = document.getElementById('email').value;
+            const mensaje = document.getElementById('mensaje').value;
             
             // Validación básica
-            if (!name || !email || !message) {
+            if (!nombre || !email || !mensaje) {
                 showNotification('Por favor, completa todos los campos.', 'error');
                 return;
             }
@@ -107,20 +107,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Simular envío del formulario
+            // Mostrar estado de envío
             const submitButton = this.querySelector('.submit-button');
             const originalText = submitButton.textContent;
-            
             submitButton.textContent = 'Enviando...';
             submitButton.disabled = true;
             
-            // Simular delay de envío
-            setTimeout(() => {
+            // Enviar formulario directamente
+            const formData = new FormData(this);
+            
+            fetch('/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(formData).toString()
+            })
+            .then(() => {
                 showNotification('¡Mensaje enviado con éxito! Te contactaremos pronto.', 'success');
                 this.reset();
+            })
+            .catch((error) => {
+                showNotification('Error al enviar el mensaje. Por favor, intenta nuevamente.', 'error');
+                console.error('Error:', error);
+            })
+            .finally(() => {
                 submitButton.textContent = originalText;
                 submitButton.disabled = false;
-            }, 2000);
+            });
         });
     }
     
