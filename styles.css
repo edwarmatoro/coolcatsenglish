@@ -501,15 +501,35 @@ section h2 {
 @media (max-width: 768px) {
     .nav-menu {
         display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.98);
+        flex-direction: column;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        box-shadow: var(--shadow);
+        border-bottom: 1px solid var(--border-color);
+        z-index: 1001;
     }
     
+    .nav-menu.active {
+        display: flex;
+    }
+
     .hamburger {
         display: flex;
     }
     
+    .nav-container {
+        position: relative;
+    }
+
     .logo {
         position: relative;
         flex: 1 1 auto;
+        padding-left: 80px;
     }
     
     .logo h1 {
@@ -582,6 +602,10 @@ section h2 {
         padding: 0 15px;
     }
     
+    .logo {
+        padding-left: 72px;
+    }
+
     .logo h1 {
         font-size: 1.4rem;
     }
