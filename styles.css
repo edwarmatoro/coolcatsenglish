@@ -127,16 +127,15 @@ body {
         display: grid;
         grid-template-columns: 64px 1fr 64px;
         align-items: center;
-        gap: 8px;
+        column-gap: 12px;
         padding: 0.5rem 0.75rem;
         min-height: 72px;
     }
 
     .logo {
         grid-column: 1 / 2;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        display: block;
+        justify-self: start;
     }
 
     .site-title {
@@ -160,6 +159,8 @@ body {
 
     .logo-image {
         height: 64px;
+        display: block;
+        margin: 0;
     }
 }
 
