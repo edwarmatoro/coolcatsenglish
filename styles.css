@@ -512,7 +512,7 @@ section h2 {
     }
     
     .logo-image {
-        height: 88px;
+        height: 180px;
     }
     
     .hero-container {
@@ -580,13 +580,13 @@ section h2 {
 
 @media (max-width: 768px) {
     .logo-image {
-        height: 88px;
+        height: 180px;
     }
 }
 
 @media (max-width: 480px) {
     .logo-image {
-        height: 96px;
+        height: 240px;
     }
 }
 
