@@ -526,15 +526,15 @@ section h2 {
         position: relative;
         padding: 0.5rem 1rem;
         align-items: center;
-        min-height: 72px;
+        min-height: 80px;
+        display: flex;
+        justify-content: center;
     }
 
     .logo {
-        display: flex;
-        align-items: center;
-        flex: 1 1 auto;
-        padding-left: 0;
         position: relative;
+        flex: 1 1 auto;
+        display: block;
     }
     
     .logo h1 {
@@ -542,13 +542,16 @@ section h2 {
         text-align: center;
         margin: 0;
         width: 100%;
+        padding: 0 48px; /* espacio visual para el icono hamburgesa a la derecha */
     }
     
     .logo-image {
-        position: static;
-        transform: none;
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
         height: 64px;
-        margin-right: 12px;
+        margin: 0;
     }
     
     .hero-container {
