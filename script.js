@@ -299,6 +299,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Track clicks on WhatsApp and phone links
+    document.querySelectorAll('a[href*="wa.me"]').forEach(a => {
+        a.addEventListener('click', () => {
+            if (window.gtag) {
+                gtag('event', 'click_whatsapp', {
+                    event_category: 'engagement',
+                    event_label: a.href,
+                    transport_type: 'beacon'
+                });
+            }
+        });
+    });
+
+    document.querySelectorAll('a[href^="tel:"]').forEach(a => {
+        a.addEventListener('click', () => {
+            if (window.gtag) {
+                gtag('event', 'click_phone', {
+                    event_category: 'engagement',
+                    event_label: a.href,
+                    transport_type: 'beacon'
+                });
+            }
+        });
+    });
+
+    if (contactForm) {
+        contactForm.addEventListener('submit', function() {
+            if (window.gtag) {
+                gtag('event', 'submit_contact_form', {
+                    event_category: 'lead',
+                    event_label: 'netlify_form_contact',
+                    transport_type: 'beacon'
+                });
+            }
+        });
+    }
+    
     // Console log para desarrollo
     console.log('🚀 Sitio web cargado correctamente');
     console.log('📱 Responsive design activado');
