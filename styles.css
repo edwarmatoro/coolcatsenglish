@@ -508,11 +508,15 @@ section h2 {
     }
     
     .logo h1 {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
     }
     
     .logo-image {
-        height: 180px;
+        height: 120px;
+    }
+    
+    .nav-container {
+        padding: 0.5rem 1rem;
     }
     
     .hero-container {
@@ -565,6 +569,10 @@ section h2 {
         padding: 0 15px;
     }
     
+    .logo h1 {
+        font-size: 1.4rem;
+    }
+    
     .hero-content h1 {
         font-size: 2.5rem;
     }
@@ -580,13 +588,13 @@ section h2 {
 
 @media (max-width: 768px) {
     .logo-image {
-        height: 180px;
+        height: 120px;
     }
 }
 
 @media (max-width: 480px) {
     .logo-image {
-        height: 240px;
+        height: 120px;
     }
 }
 
