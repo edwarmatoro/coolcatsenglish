@@ -171,6 +171,12 @@ body {
         display: block;
         margin: 0;
     }
+
+    .site-title {
+        grid-column: 2 / 3;
+        justify-self: center;
+        text-align: center;
+    }
 }
 
 /* Hero Section */
@@ -574,35 +580,30 @@ section h2 {
         display: flex;
     }
     
+    /* Keep only relative positioning; grid layout is defined above */
     .nav-container {
         position: relative;
-        padding: 0.5rem 1rem;
-        align-items: center;
-        min-height: 80px;
-        display: flex;
-        justify-content: center;
     }
 
-    .logo {
-        position: relative;
-        flex: 1 1 auto;
-        display: block;
+    /* Ensure the inner h1 inside .logo is hidden on mobile */
+    .logo h1 {
+        display: none;
     }
     
-    .logo h1 {
-        font-size: 1.6rem;
-        text-align: center;
-        margin: 0;
-        width: 100%;
-        padding: 0 48px; /* espacio visual para el icono hamburgesa a la derecha */
+    /* Keep logo static within its grid cell and within 56px width */
+    .logo {
+        grid-column: 1 / 2;
+        justify-self: start;
     }
     
     .logo-image {
-        position: absolute;
-        left: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        height: 64px;
+        position: static;
+        transform: none;
+        height: auto;
+        width: auto;
+        max-height: 64px;
+        max-width: 56px;
+        display: block;
         margin: 0;
     }
     
