@@ -164,9 +164,12 @@ body {
     }
 
     .logo-image {
-        height: 64px;
+        height: auto;
+        width: auto;
+        max-height: 64px;
+        max-width: 56px;
         display: block;
-        margin: 0 0 0 -6px; /* slight nudge left to compensate transparent padding */
+        margin: 0;
     }
 }
 
