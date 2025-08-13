@@ -152,6 +152,8 @@ body {
         color: var(--primary-color);
         margin: 0;
         display: block;
+        justify-self: center;
+        width: 100%;
     }
 
     .hamburger {
