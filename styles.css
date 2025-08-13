@@ -507,16 +507,29 @@ section h2 {
         display: flex;
     }
     
+    .logo {
+        position: relative;
+        flex: 1 1 auto;
+    }
+    
     .logo h1 {
         font-size: 1.6rem;
+        text-align: center;
+        margin: 0;
+        width: 100%;
     }
     
     .logo-image {
-        height: 120px;
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        height: 64px;
     }
     
     .nav-container {
         padding: 0.5rem 1rem;
+        align-items: center;
     }
     
     .hero-container {
@@ -588,13 +601,13 @@ section h2 {
 
 @media (max-width: 768px) {
     .logo-image {
-        height: 120px;
+        height: 64px;
     }
 }
 
 @media (max-width: 480px) {
     .logo-image {
-        height: 120px;
+        height: 64px;
     }
 }
 
