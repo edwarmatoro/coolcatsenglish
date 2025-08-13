@@ -89,6 +89,16 @@
     <link rel="apple-touch-icon" href="images/favicon.png">
     <link rel="stylesheet" href="styles.css?v=mobile-grid-areas-fix">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+    @media (max-width: 768px) {
+        .nav-container { display: grid; grid-template-columns: 128px 1fr 128px; grid-template-areas: "left center right"; align-items: center; gap: 8px; }
+        .logo { grid-area: left; justify-self: start; display: flex; align-items: center; }
+        .site-title { grid-area: center; display: block; text-align: center; justify-self: center; margin: 0; font-size: 1.6rem; color: var(--primary-color); }
+        .hamburger { grid-area: right; display: flex; justify-self: end; z-index: 1002; }
+        .logo h1 { display: none; }
+        .logo-image { height: auto; width: auto; max-height: 144px; max-width: 128px; }
+    }
+    </style>
     
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-3C9GJJYLDK"></script>
