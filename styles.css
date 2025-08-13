@@ -512,7 +512,7 @@ section h2 {
     }
     
     .logo-image {
-        height: 32px;
+        height: 56px;
     }
     
     .hero-container {
@@ -575,6 +575,18 @@ section h2 {
     
     .contact-form {
         padding: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .logo-image {
+        height: 56px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-image {
+        height: 64px;
     }
 }
 
