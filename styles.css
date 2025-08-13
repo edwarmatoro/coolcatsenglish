@@ -524,12 +524,17 @@ section h2 {
     
     .nav-container {
         position: relative;
+        padding: 0.5rem 1rem;
+        align-items: center;
+        min-height: 72px;
     }
 
     .logo {
-        position: relative;
+        display: flex;
+        align-items: center;
         flex: 1 1 auto;
-        padding-left: 80px;
+        padding-left: 0;
+        position: relative;
     }
     
     .logo h1 {
@@ -540,16 +545,10 @@ section h2 {
     }
     
     .logo-image {
-        position: absolute;
-        left: 8px;
-        top: 50%;
-        transform: translateY(-50%);
+        position: static;
+        transform: none;
         height: 64px;
-    }
-    
-    .nav-container {
-        padding: 0.5rem 1rem;
-        align-items: center;
+        margin-right: 12px;
     }
     
     .hero-container {
@@ -602,10 +601,6 @@ section h2 {
         padding: 0 15px;
     }
     
-    .logo {
-        padding-left: 72px;
-    }
-
     .logo h1 {
         font-size: 1.4rem;
     }

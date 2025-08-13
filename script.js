@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
         hamburger.addEventListener('click', function() {
             hamburger.classList.toggle('active');
             navMenu.classList.toggle('active');
+            const isOpen = navMenu.classList.contains('active');
+            hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });
     }
     
@@ -21,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
         link.addEventListener('click', function() {
             hamburger.classList.remove('active');
             navMenu.classList.remove('active');
+            hamburger.setAttribute('aria-expanded', 'false');
         });
     });
     
