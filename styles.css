@@ -131,6 +131,7 @@ body {
     .nav-container {
         display: grid;
         grid-template-columns: 128px 1fr 128px;
+        grid-template-areas: "left center right";
         align-items: center;
         gap: 8px;
         padding: 0.5rem 0.75rem;
@@ -138,14 +139,15 @@ body {
     }
 
     .logo {
-        grid-column: 1 / 2;
+        grid-area: left;
         display: flex;
         align-items: center;
         gap: 8px;
+        justify-self: start;
     }
 
     .site-title {
-        grid-column: 2 / 3;
+        grid-area: center;
         text-align: center;
         font-size: 1.6rem;
         font-weight: 700;
@@ -153,13 +155,14 @@ body {
         margin: 0;
         display: block;
         justify-self: center;
-        width: 100%;
+        width: auto;
     }
 
     .hamburger {
-        grid-column: 3 / 4;
+        grid-area: right;
         justify-self: end;
         display: flex;
+        z-index: 1002;
     }
 
     .logo h1 {
