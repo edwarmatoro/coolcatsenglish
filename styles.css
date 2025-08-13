@@ -130,7 +130,7 @@ body {
 @media (max-width: 768px) {
     .nav-container {
         display: grid;
-        grid-template-columns: 64px 1fr 64px;
+        grid-template-columns: 128px 1fr 128px;
         align-items: center;
         gap: 8px;
         padding: 0.5rem 0.75rem;
@@ -167,8 +167,8 @@ body {
     .logo-image {
         height: auto;
         width: auto;
-        max-height: 72px;
-        max-width: 64px;
+        max-height: 144px;
+        max-width: 128px;
     }
 }
 
@@ -594,8 +594,8 @@ section h2 {
         transform: none;
         height: auto;
         width: auto;
-        max-height: 72px;
-        max-width: 64px;
+        max-height: 144px;
+        max-width: 128px;
         display: block;
         margin: 0;
     }
