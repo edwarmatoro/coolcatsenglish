@@ -121,13 +121,18 @@ body {
     transition: var(--transition);
 }
 
+/* Hide site title by default (desktop) */
+.site-title {
+    display: none;
+}
+
 /* Mobile header grid */
 @media (max-width: 768px) {
     .nav-container {
         display: grid;
-        grid-template-columns: 64px 1fr 64px;
+        grid-template-columns: 56px 1fr 56px;
         align-items: center;
-        column-gap: 12px;
+        column-gap: 8px;
         padding: 0.5rem 0.75rem;
         min-height: 72px;
     }
@@ -139,6 +144,7 @@ body {
     }
 
     .site-title {
+        display: block;
         grid-column: 2 / 3;
         text-align: center;
         font-size: 1.4rem;
@@ -160,7 +166,7 @@ body {
     .logo-image {
         height: 64px;
         display: block;
-        margin: 0;
+        margin: 0 0 0 -6px; /* slight nudge left to compensate transparent padding */
     }
 }
 
