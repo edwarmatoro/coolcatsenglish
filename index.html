@@ -91,12 +91,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
     @media (max-width: 768px) {
-        .nav-container { display: grid; grid-template-columns: 128px 1fr 128px; grid-template-areas: "left center right"; align-items: center; gap: 8px; }
+        .nav-container { display: grid; grid-template-columns: 96px 1fr 56px; grid-template-areas: "left center right"; align-items: center; gap: 8px; width: 100%; }
         .logo { grid-area: left; justify-self: start; display: flex; align-items: center; }
         .site-title { grid-area: center; display: block; text-align: center; justify-self: center; margin: 0; font-size: 1.6rem; color: var(--primary-color); }
         .hamburger { grid-area: right; display: flex; justify-self: end; z-index: 1002; }
         .logo h1 { display: none; }
-        .logo-image { height: auto; width: auto; max-height: 144px; max-width: 128px; }
+        .logo-image { height: auto; width: auto; max-height: 144px; max-width: 128px; margin-left: -16px; }
     }
     </style>
     
