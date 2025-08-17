@@ -806,22 +806,38 @@ section h2 {
     }
     
     .calendar-content {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-        max-width: 100%;
-        margin-left: 0;
-        margin-right: 0;
+        margin-top: 1.5rem;
     }
     
     .calendar-item {
         padding: 1.5rem;
-        margin-left: 0;
+    }
+    
+    .holidays-section {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
     }
     
     .holidays-section h3 {
         font-size: 1.3rem;
-        margin-left: 0;
         text-align: center;
+    }
+    
+    .holidays-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.8rem;
+    }
+    
+    .holiday-item {
+        padding: 0.8rem;
+    }
+    
+    .holiday-item .date {
+        font-size: 1rem;
+    }
+    
+    .holiday-item .name {
+        font-size: 0.8rem;
     }
     
     .courses-grid {
@@ -986,9 +1002,7 @@ a:focus-visible {
 }
 
 .calendar-content {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
+    display: block;
     margin-top: 2rem;
     text-align: left;
     max-width: 90%;
@@ -1020,28 +1034,34 @@ a:focus-visible {
     text-align: left;
 }
 
+.holidays-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
 .holidays-section h3 {
     color: var(--primary-color);
     margin-bottom: 2rem;
     font-size: 1.5rem;
     text-align: left;
-    margin-left: 2rem;
+    text-align: center;
 }
 
 .holidays-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.8rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 .holiday-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
     background: white;
     padding: 1rem;
     border-radius: 10px;
     box-shadow: var(--shadow);
+    text-align: center;
     transition: var(--transition);
 }
 
@@ -1051,17 +1071,15 @@ a:focus-visible {
 }
 
 .holiday-item .date {
-    background: var(--primary-color);
-    color: white;
-    padding: 0.5rem 0.8rem;
-    border-radius: 8px;
-    font-weight: 600;
-    min-width: 60px;
-    text-align: center;
-    font-size: 0.9rem;
+    display: block;
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
 }
 
 .holiday-item .name {
-    color: var(--text-color);
-    font-weight: 500;
+    color: var(--light-text);
+    font-size: 0.9rem;
+    line-height: 1.4;
 } 
