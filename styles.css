@@ -400,11 +400,11 @@ section h2 {
 
 .school-photo {
     width: 100%;
-    height: 140px !important;
+    height: 280px !important;
     object-fit: cover;
     border-radius: 15px;
     box-shadow: var(--shadow);
-    max-height: 140px !important;
+    max-height: 280px !important;
 }
 
 .about-teacher-section {
@@ -774,11 +774,11 @@ section h2 {
     }
     
     .school-photo {
-        height: 140px !important;
+        height: 280px !important;
         width: 100%;
         object-fit: cover;
         border-radius: 15px;
-        max-height: 140px !important;
+        max-height: 280px !important;
     }
     
     .about-teacher-section {
