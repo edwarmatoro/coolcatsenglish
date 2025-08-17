@@ -351,14 +351,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const popup = document.getElementById('enrollmentPopup');
     const closeBtn = popup.querySelector('.popup-close');
     
-    // Mostrar el popup después de 3 segundos
-    setTimeout(() => {
-        // Solo mostrar si no se ha visto antes en esta sesión
-        if (!sessionStorage.getItem('enrollmentPopupShown')) {
-            popup.classList.add('show');
-            sessionStorage.setItem('enrollmentPopupShown', 'true');
-        }
-    }, 8000);
+    // Popup deshabilitado temporalmente - solo se muestra al hacer clic en el botón flotante
+    // setTimeout(() => {
+    //     // Solo mostrar si no se ha visto antes en esta sesión
+    //     if (!sessionStorage.getItem('enrollmentPopupShown')) {
+    //         popup.classList.add('show');
+    //         sessionStorage.setItem('enrollmentPopupShown', 'true');
+    //     }
+    // }, 8000);
     
     // Cerrar popup con el botón X
     closeBtn.addEventListener('click', () => {
