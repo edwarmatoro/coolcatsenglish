@@ -18,13 +18,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Cerrar menú móvil al hacer clic en un enlace
+    // Cerrar menú al hacer clic en un enlace
     navLinks.forEach(link => {
-        link.addEventListener('click', function() {
+        link.addEventListener('click', () => {
             hamburger.classList.remove('active');
             navMenu.classList.remove('active');
             hamburger.setAttribute('aria-expanded', 'false');
         });
+    });
+    
+    // Cerrar menú al hacer scroll
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            if (navMenu.classList.contains('active')) {
+                hamburger.classList.remove('active');
+                navMenu.classList.remove('active');
+                hamburger.setAttribute('aria-expanded', 'false');
+            }
+        }, 100); // Delay de 100ms para evitar cierre inmediato durante scroll rápido
     });
     
     // Scroll suave para enlaces internos
