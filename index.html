@@ -26,27 +26,19 @@
       "@context": "https://schema.org",
       "@type": "LanguageSchool",
       "name": "CoolCats English",
-      "description": "Academia de inglés en Barcelona con clases particulares y grupos pequeños",
+      "description": "Clases de inglés en Barcelona y online. Profesora con 20+ años de experiencia. Clases particulares y grupos pequeños. Diagnóstico gratis y horarios flexibles.",
       "url": "https://coolcatsenglish.com",
       "telephone": "+34 659 09 74 55",
-      "email": "info@coolcatsenglish.com",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Baixada de la Plana, 46",
         "addressLocality": "Barcelona",
-        "postalCode": "08032",
         "addressRegion": "Cataluña",
+        "postalCode": "08024",
+        "streetAddress": "Horta-Guinardó",
         "addressCountry": "ES"
       },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": "41.4189",
-        "longitude": "2.1619"
-      },
-      "openingHours": "Mo-Fr 09:00-20:00",
       "sameAs": [
-        "https://wa.me/34659097455",
-        "https://t.me/coolcatsenglish"
+        "https://wa.me/34659097455"
       ]
     }
     </script>
@@ -63,8 +55,7 @@
         "height": 600
       },
       "sameAs": [
-        "https://wa.me/34659097455",
-        "https://t.me/coolcatsenglish"
+        "https://wa.me/34659097455"
       ]
     }
     </script>
@@ -91,12 +82,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
     @media (max-width: 768px) {
-        .nav-container { display: grid; grid-template-columns: 96px 1fr 56px; grid-template-areas: "left center right"; align-items: center; gap: 8px; width: 100%; }
+        .nav-container { display: grid; grid-template-columns: 88px 1fr 56px; grid-template-areas: "left center right"; align-items: center; gap: 8px; width: 100%; padding: 0.5rem 0.75rem; min-height: 72px; }
         .logo { grid-area: left; justify-self: start; display: flex; align-items: center; }
-        .site-title { grid-area: center; display: block; text-align: center; justify-self: center; margin: 0; font-size: 1.6rem; color: var(--primary-color); }
+        .site-title { grid-area: center; display: block; text-align: center; justify-self: center; margin: 0; font-size: 1.6rem; color: #333; font-weight: 700; width: auto; }
         .hamburger { grid-area: right; display: flex; justify-self: end; z-index: 1002; }
         .logo h1 { display: none; }
-        .logo-image { height: auto; width: auto; max-height: 144px; max-width: 128px; margin-left: -16px; }
+        .logo-image { height: auto; width: auto; max-height: 144px; max-width: 88px; margin-left: -8px; }
     }
     </style>
     
@@ -110,6 +101,42 @@
     </script>
 </head>
 <body>
+    <!-- Pop-up de Inscripciones -->
+    <div id="enrollmentPopup" class="popup-overlay">
+        <div class="popup-content">
+            <button class="popup-close" aria-label="Cerrar">&times;</button>
+            <div class="popup-header">
+                <h2>🎓 ¡Inscripciones Abiertas!</h2>
+                <div class="popup-badge">Curso 2025-2026</div>
+            </div>
+            <div class="popup-body">
+                <p><strong>¡No te quedes sin tu plaza!</strong></p>
+                <p>Apúntate ya para el nuevo curso escolar que comienza en <strong>septiembre 2025</strong>.</p>
+                <ul class="popup-benefits">
+                    <li>✅ Diagnóstico gratuito de 15-20 minutos</li>
+                    <li>✅ Grupos reducidos para atención personalizada</li>
+                    <li>✅ Modalidad presencial y online disponible</li>
+                    <li>✅ Profesora con más de 25 años de experiencia</li>
+                </ul>
+                <div class="popup-cta">
+                    <a href="https://wa.me/34659097455?text=Hola%2C%20quiero%20información%20sobre%20las%20inscripciones%20para%20el%20curso%202025-2026&utm_source=website&utm_medium=popup&utm_campaign=enrollment_2025" 
+                       target="_blank" class="popup-btn primary">
+                        💬 Reserva tu Plaza por WhatsApp
+                    </a>
+                    <a href="#contacto" class="popup-btn secondary" onclick="document.getElementById('enrollmentPopup').style.display='none'">
+                        📧 Contáctanos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón flotante para inscripciones -->
+    <button id="enrollmentFab" class="floating-btn" onclick="showEnrollmentPopup()" aria-label="Inscripciones abiertas">
+        <span class="fab-icon">🎓</span>
+        <span class="fab-text">Inscríbete</span>
+    </button>
+
     <header class="header">
         <nav class="nav">
             <div class="nav-container">
@@ -121,10 +148,10 @@
                     <h1>CoolCats English</h1>
                 </div>
                 <h1 class="site-title">CoolCats English</h1>
-                <ul class="nav-menu">
-                    <li><a href="#inicio">Inicio</a></li>
+                <ul class="nav-menu" id="nav-menu">
                     <li><a href="#servicios">Servicios</a></li>
-                    <li><a href="#acerca">Acerca de</a></li>
+                    <li><a href="#acerca">Acerca</a></li>
+                    <li><a href="#cursos">Cursos</a></li>
                     <li><a href="#contacto">Contacto</a></li>
                 </ul>
                 <div class="hamburger">
@@ -149,11 +176,7 @@
                                 <img src="images/whatsapp-official.svg" alt="WhatsApp" class="contact-icon">
                                 WhatsApp
                             </a>
-                            <a href="https://t.me/coolcatsenglish" target="_blank" class="contact-btn telegram-btn">
-                                <img src="images/icons8-aplicación-telegrama-100.svg" alt="Telegram" class="contact-icon">
-                                Telegram
-                            </a>
-                </div>
+                        </div>
                     </div>
                 </div>
                 <!-- <div class="hero-image">
@@ -167,24 +190,24 @@
                 <h2>Nuestros Servicios</h2>
                 <div class="services-grid">
                     <div class="service-card">
-                        <div class="service-icon">👩‍🏫</div>
-                        <h3>Clases Particulares</h3>
-                        <p>Atención personalizada con una profesora experimentada. Clases individuales presenciales o virtuales adaptadas a tu nivel y objetivos específicos.</p>
-                    </div>
-                    <div class="service-card">
                         <div class="service-icon">👥</div>
-                        <h3>Grupos Pequeños</h3>
-                        <p>Clases en grupos reducidos presenciales o virtuales para práctica conversacional efectiva con atención personalizada.</p>
+                        <h3>Clases Particulares</h3>
+                        <p>Clases individuales presenciales o virtuales adaptadas a tu nivel y objetivos específicos.</p>
                     </div>
                     <div class="service-card">
-                        <div class="service-icon">🏠</div>
-                        <h3>Clases Presenciales</h3>
-                        <p>Clases en nuestra academia ubicada en Horta-Guinardó, Barcelona. Ambiente acogedor para un aprendizaje óptimo.</p>
+                        <div class="service-icon">👨‍👩‍👧‍👦</div>
+                        <h3>Grupos Pequeños</h3>
+                        <p>Clases en grupos reducidos que garantizan atención personalizada y un ambiente dinámico.</p>
                     </div>
                     <div class="service-card">
                         <div class="service-icon">💻</div>
                         <h3>Clases Virtuales</h3>
-                        <p>Aprende desde cualquier lugar con clases online interactivas. Metodología probada durante 20 años.</p>
+                        <p>Aprende desde cualquier lugar con clases online interactivas.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">🏢</div>
+                        <h3>Clases de Empresa</h3>
+                        <p>Formación especializada para empresas y profesionales. Consulta presupuesto.</p>
                     </div>
                 </div>
             </div>
@@ -192,16 +215,140 @@
 
         <section id="acerca" class="about">
             <div class="container">
-                <div class="about-content">
-                    <div class="about-text">
-                        <h2>Acerca de CoolCats English</h2>
-                        <p>Somos una escuela de inglés innovadora que hace que aprender el idioma sea divertido y efectivo. Ofrecemos clases presenciales y virtuales con metodología que combina la práctica conversacional.</p>
-                        <p>Con más de 20 años de experiencia en la enseñanza del inglés, nuestra profesora ha ayudado a cientos de estudiantes a alcanzar fluidez y confianza en el idioma.</p>
+                <div class="about-school">
+                    <div class="about-school-text">
+                        <h2>Acerca de la escuela</h2>
+                        <p>CoolCats English es un espacio acogedor donde aprenderás a tu ritmo. Somos una escuela pequeña y familiar, lo que nos permite conocerte de verdad y adaptar cada clase a lo que necesitas. Aquí combinamos lo mejor de la enseñanza moderna —actividades creativas e interactivas, y materiales actuales — con un ambiente relajado y motivador.</p>
+                        <p>Con grupos reducidos, aprender inglés se convierte en una experiencia personalizada y divertida. Ya sea para viajar, trabajar o simplemente disfrutar, te acompañamos paso a paso para que consigas tus objetivos sin dejar de pasarlo bien.</p>
                     </div>
-                    <div class="about-stats">
-                        <div class="stat">
-                            <h3>20+</h3>
-                            <p>Años de Experiencia</p>
+                    <div class="about-school-photos">
+                        <img src="images/foto_local_3.jpg" alt="Ambiente acogedor para las clases" class="school-photo">
+                        <img src="images/foto_local_1.jpg" alt="Interior acogedor de CoolCats English" class="school-photo">
+                        <img src="images/foto_local_2.jpg" alt="Aula de clases en CoolCats English" class="school-photo">
+                    </div>
+                </div>
+                
+                <div class="about-teacher-section">
+                        <h3>Acerca de la profesora</h3>
+                        <div class="teacher-section">
+                            <div class="teacher-photo">
+                                <img src="images/Foto_susy.jpg" alt="Susana, profesora de CoolCats English" class="teacher-image">
+                            </div>
+                            <div class="teacher-text">
+                                <p>¡Hola! Soy Susana. Estudié y me recibí de profesora de inglés en la Universidad Nacional de Mar del Plata, Argentina, y desde el año 2000 me dedico a enseñar este idioma que tanto me apasiona.</p>
+                                <p>En 2002 la vida me llevó a Nueva York, donde viví y trabajé hasta 2008. Fue una experiencia única: no solo perfeccioné mi inglés, sino que también me sumergí en su cultura, costumbres y energía.</p>
+                                <p>En 2014 llegué a Barcelona, ciudad que ahora siento como mi hogar, y seguí enseñando inglés, especialmente a profesionales y empresas.</p>
+                                <p>En enero de 2025, gracias al apoyo de mi familia, nació este pequeño gran proyecto. CoolCats English es un espacio cercano, acogedor y flexible, pensado para que aprendas inglés a tu ritmo, con confianza y disfrutando del proceso.</p>
+                            </div>
+                        </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cursos" class="courses">
+            <div class="container">
+                <h2>Nuestros Cursos</h2>
+                <div class="courses-grid">
+                    <div class="course-category">
+                        <h3>Cursos para niños</h3>
+                        <div class="course-item">
+                            <h4>Niños de 7 a 8 años</h4>
+                            <p>Viernes de 17:15 a 18:40</p>
+                        </div>
+                        <div class="course-item">
+                            <h4>Niños de 9 a 11 años</h4>
+                            <p>Lunes de 17:15 a 18:40</p>
+                        </div>
+                    </div>
+                    
+                    <div class="course-category">
+                        <h3>Cursos para jóvenes</h3>
+                        <div class="course-item">
+                            <h4>Nivel A2 (intensivo)</h4>
+                            <p>2 horas semanales<br>Jueves de 18:15 a 20:15</p>
+                        </div>
+                        <div class="course-item">
+                            <h4>Nivel A2/B1</h4>
+                            <p>3 horas semanales<br>Martes de 17:10 a 18:40<br>Jueves de 16:45 a 18:15</p>
+                        </div>
+                        <div class="course-item">
+                            <h4>Nivel B1</h4>
+                            <p>3 horas semanales<br>Miércoles de 17:10 a 18:40<br>Viernes de 15:30 a 17:00</p>
+                        </div>
+                        <div class="course-item">
+                            <h4>Nivel B2</h4>
+                            <p>4 horas semanales<br>Lunes de 18:40 a 20:40<br>Miércoles de 18:40 a 20:40</p>
+                        </div>
+                    </div>
+                    
+                    <div class="course-category">
+                        <h3>Cursos para Adultos</h3>
+                        <div class="course-item">
+                            <h4>Adultos Principiantes</h4>
+                            <p>2 horas semanales<br>Martes de 18:40 a 20:40</p>
+                        </div>
+                        <div class="course-item">
+                            <h4>Adultos Intermedio</h4>
+                            <p>2 horas semanales<br>Sábados de 9:00 a 11:00</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="coffee-chat">
+                    <h3>Coffee Chat ☕</h3>
+                    <p class="coffee-subtitle">Una hora para hablar, reír y ganar confianza en inglés</p>
+                    <p>En el Coffee Chat practicamos inglés durante una hora de forma relajada y natural, hablando de temas que te interesan: actualidad, viajes, curiosidades, cultura o simples anécdotas del día a día.</p>
+                    <p>Es el espacio perfecto para mejorar tu fluidez, ampliar vocabulario y perder el miedo a hablar, mientras compartes un momento agradable en un ambiente acogedor.</p>
+                    <p><strong>Consulta días y horas disponibles</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <section id="calendario" class="calendar">
+            <div class="container">
+                <h2>Calendario Escolar 2025-2026</h2>
+                <div class="calendar-content">
+                    <div class="calendar-info">
+                        <div class="calendar-item">
+                            <h3>📅 Fechas del curso</h3>
+                            <p><strong>Inicio del curso:</strong> 8 de septiembre de 2025</p>
+                            <p><strong>Fin del curso:</strong> 19 de junio de 2026</p>
+                        </div>
+                        
+                        <div class="calendar-item">
+                            <h3>🎄 Vacaciones de Navidad</h3>
+                            <p><strong>Del 23 de diciembre de 2025 al 7 de enero de 2026</strong></p>
+                        </div>
+                        
+                        <div class="calendar-item">
+                            <h3>🌸 Vacaciones de Semana Santa</h3>
+                            <p><strong>Del 30 de marzo al 6 de abril de 2026</strong></p>
+                        </div>
+                    </div>
+                    
+                    <div class="holidays-section">
+                        <h3>🏛️ Días festivos (no hay clases)</h3>
+                        <div class="holidays-grid">
+                            <div class="holiday-item">
+                                <span class="date">11 Sep</span>
+                                <span class="name">Diada Nacional de Catalunya 2025</span>
+                            </div>
+                            <div class="holiday-item">
+                                <span class="date">24 Sep</span>
+                                <span class="name">Festividad Local 2025</span>
+                            </div>
+                            <div class="holiday-item">
+                                <span class="date">1 May</span>
+                                <span class="name">Día del Trabajador 2026</span>
+                            </div>
+                            <div class="holiday-item">
+                                <span class="date">25 May</span>
+                                <span class="name">Segundas Pascuas 2026</span>
+                            </div>
+                            <div class="holiday-item">
+                                <span class="date">24 Jun</span>
+                                <span class="name">San Juan 2026</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -225,10 +372,6 @@
                         <div class="contact-item">
                             <img src="images/whatsapp-official.svg" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;">
                             <p><a href="https://wa.me/34659097455?utm_source=website&utm_medium=contact&utm_campaign=whatsapp_contact" target="_blank" style="color: var(--primary-color); text-decoration: none;">WhatsApp</a></p>
-                        </div>
-                        <div class="contact-item">
-                            <img src="images/icons8-aplicación-telegrama-100.svg" alt="Telegram" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;">
-                            <p><a href="https://t.me/coolcatsenglish" target="_blank" style="color: var(--primary-color); text-decoration: none;">Telegram</a></p>
                         </div>
                         <div class="contact-item">
                             <span class="icon">📍</span>
@@ -280,11 +423,11 @@
                     <p>Haciendo que aprender inglés sea divertido y efectivo.</p>
                 </div>
                 <div class="footer-section">
-                    <h4>Enlaces Rápidos</h4>
+                    <h4>Enlaces</h4>
                     <ul>
-                        <li><a href="#inicio">Inicio</a></li>
                         <li><a href="#servicios">Servicios</a></li>
-                        <li><a href="#acerca">Acerca de</a></li>
+                        <li><a href="#acerca">Acerca</a></li>
+                        <li><a href="#cursos">Cursos</a></li>
                         <li><a href="#contacto">Contacto</a></li>
                     </ul>
                 </div>

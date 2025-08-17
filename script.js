@@ -346,6 +346,73 @@ document.addEventListener('DOMContentLoaded', function() {
     
 });
 
+// Pop-up de Inscripciones
+document.addEventListener('DOMContentLoaded', function() {
+    const popup = document.getElementById('enrollmentPopup');
+    const closeBtn = popup.querySelector('.popup-close');
+    
+    // Mostrar el popup después de 3 segundos
+    setTimeout(() => {
+        // Solo mostrar si no se ha visto antes en esta sesión
+        if (!sessionStorage.getItem('enrollmentPopupShown')) {
+            popup.classList.add('show');
+            sessionStorage.setItem('enrollmentPopupShown', 'true');
+        }
+    }, 3000);
+    
+    // Cerrar popup con el botón X
+    closeBtn.addEventListener('click', () => {
+        popup.classList.remove('show');
+    });
+    
+    // Cerrar popup haciendo clic fuera del contenido
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup) {
+            popup.classList.remove('show');
+        }
+    });
+    
+    // Cerrar popup con la tecla Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && popup.classList.contains('show')) {
+            popup.classList.remove('show');
+        }
+    });
+    
+    // Tracking de GA4 para el popup
+    const whatsappBtn = popup.querySelector('.popup-btn.primary');
+    const contactBtn = popup.querySelector('.popup-btn.secondary');
+    
+    if (whatsappBtn) {
+        whatsappBtn.addEventListener('click', () => {
+            if (window.gtag) {
+                gtag('event', 'click_enrollment_whatsapp', {
+                    event_category: 'enrollment',
+                    event_label: 'popup_whatsapp_2025',
+                    transport_type: 'beacon'
+                });
+            }
+        });
+    }
+    
+    if (contactBtn) {
+        contactBtn.addEventListener('click', () => {
+            if (window.gtag) {
+                gtag('event', 'click_enrollment_contact', {
+                    event_category: 'enrollment',
+                    event_label: 'popup_contact_2025',
+                    transport_type: 'beacon'
+                });
+            }
+        });
+    }
+});
+
+// Función para mostrar el popup manualmente (opcional)
+function showEnrollmentPopup() {
+    document.getElementById('enrollmentPopup').classList.add('show');
+}
+
 // Función para detectar si el dispositivo es móvil
 function isMobile() {
     return window.innerWidth <= 768;
