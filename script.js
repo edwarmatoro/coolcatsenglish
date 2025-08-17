@@ -358,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
             popup.classList.add('show');
             sessionStorage.setItem('enrollmentPopupShown', 'true');
         }
-    }, 3000);
+    }, 8000);
     
     // Cerrar popup con el botón X
     closeBtn.addEventListener('click', () => {
