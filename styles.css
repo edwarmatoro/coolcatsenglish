@@ -774,11 +774,12 @@ section h2 {
     }
     
     .school-photo {
-        height: 350px !important;
+        height: 400px !important;
+        min-height: 400px !important;
         width: 100%;
         object-fit: cover;
         border-radius: 15px;
-        max-height: 350px !important;
+        max-height: 400px !important;
     }
     
     .about-teacher-section {
