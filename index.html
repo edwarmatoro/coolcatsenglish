@@ -394,6 +394,38 @@
         </div>
     </footer>
 
+    <!-- Pop-up Modal -->
+    <div id="modalPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; justify-content:center; align-items:center;">
+        <div style="position:relative; max-width:90%; max-height:90vh;">
+            <button onclick="document.getElementById('modalPopup').style.display='none'" style="position:absolute; top:-15px; right:-15px; width:40px; height:40px; background:white; border:none; border-radius:50%; font-size:24px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.5); z-index:100000;">&times;</button>
+            <img src="images/Flyer Clases Particulares Llamativo Naranja.png" alt="Nuevo curso" style="max-width:100%; max-height:90vh; border-radius:12px; display:block;">
+        </div>
+    </div>
+
+    <script>
+        // Mostrar pop-up después de 3 segundos
+        setTimeout(function() {
+            var modal = document.getElementById('modalPopup');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }, 3000);
+        
+        // Cerrar con click en el fondo
+        document.getElementById('modalPopup').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.style.display = 'none';
+            }
+        });
+        
+        // Cerrar con ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.getElementById('modalPopup').style.display = 'none';
+            }
+        });
+    </script>
+
     <script src="script.js"></script>
 
     <script type="application/ld+json">
