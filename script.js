@@ -7,23 +7,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const navLinks = document.querySelectorAll('.nav-menu a');
     const contactForm = document.querySelector('.contact-form');
     const ctaButton = document.querySelector('.cta-button');
+    const header = document.querySelector('.header');
     
     // Menú móvil
     if (hamburger) {
         hamburger.addEventListener('click', function() {
             hamburger.classList.toggle('active');
             navMenu.classList.toggle('active');
-            const isOpen = navMenu.classList.contains('active');
-            hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            hamburger.setAttribute('aria-expanded', navMenu.classList.contains('active') ? 'true' : 'false');
         });
     }
     
-    // Cerrar menú al hacer clic en un enlace
+    // Scroll suave + cerrar menú al hacer clic en un enlace
     navLinks.forEach(link => {
-        link.addEventListener('click', () => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Cerrar menú móvil
             hamburger.classList.remove('active');
             navMenu.classList.remove('active');
             hamburger.setAttribute('aria-expanded', 'false');
+            
+            // Scroll suave
+            const targetId = this.getAttribute('href');
+            const targetSection = document.querySelector(targetId);
+            if (targetSection) {
+                const headerHeight = header.offsetHeight;
+                window.scrollTo({
+                    top: targetSection.offsetTop - headerHeight,
+                    behavior: 'smooth'
+                });
+            }
         });
     });
     
@@ -37,53 +51,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 navMenu.classList.remove('active');
                 hamburger.setAttribute('aria-expanded', 'false');
             }
-        }, 100); // Delay de 100ms para evitar cierre inmediato durante scroll rápido
+        }, 100);
     });
     
-    // Scroll suave para enlaces internos
-    navLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const targetId = this.getAttribute('href');
-            const targetSection = document.querySelector(targetId);
-            
-            if (targetSection) {
-                const headerHeight = document.querySelector('.header').offsetHeight;
-                const targetPosition = targetSection.offsetTop - headerHeight;
-                
-                window.scrollTo({
-                    top: targetPosition,
-                    behavior: 'smooth'
-                });
-            }
-        });
-    });
-    
-    // Animación del header al hacer scroll
+    // Ocultar/mostrar header al hacer scroll
     let lastScrollTop = 0;
-    const header = document.querySelector('.header');
-    
     window.addEventListener('scroll', function() {
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         
         if (scrollTop > lastScrollTop && scrollTop > 100) {
-            // Scrolling down
             header.style.transform = 'translateY(-100%)';
         } else {
-            // Scrolling up
             header.style.transform = 'translateY(0)';
         }
         
         lastScrollTop = scrollTop;
     });
     
-    // Animación de elementos al hacer scroll
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
+    // Animación de elementos al hacer scroll (IntersectionObserver)
     const observer = new IntersectionObserver(function(entries) {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -91,11 +76,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 entry.target.style.transform = 'translateY(0)';
             }
         });
-    }, observerOptions);
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
     
-    // Observar elementos para animación
-    const animatedElements = document.querySelectorAll('.service-card, .stat, .contact-item');
-    animatedElements.forEach(el => {
+    document.querySelectorAll('.service-card, .contact-item').forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(30px)';
         el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
@@ -107,35 +90,38 @@ document.addEventListener('DOMContentLoaded', function() {
         contactForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Obtener datos del formulario
             const nombre = document.getElementById('nombre').value;
             const email = document.getElementById('email').value;
             const mensaje = document.getElementById('mensaje').value;
             
-            // Validación básica
             if (!nombre || !email || !mensaje) {
                 showNotification('Por favor, completa todos los campos.', 'error');
                 return;
             }
             
-            if (!isValidEmail(email)) {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                 showNotification('Por favor, ingresa un email válido.', 'error');
                 return;
             }
             
-            // Mostrar estado de envío
+            // Tracking de analytics
+            if (window.gtag) {
+                gtag('event', 'submit_contact_form', {
+                    event_category: 'lead',
+                    event_label: 'netlify_form_contact',
+                    transport_type: 'beacon'
+                });
+            }
+            
             const submitButton = this.querySelector('.submit-button');
             const originalText = submitButton.textContent;
             submitButton.textContent = 'Enviando...';
             submitButton.disabled = true;
             
-            // Enviar formulario directamente
-            const formData = new FormData(this);
-            
             fetch('/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams(formData).toString()
+                body: new URLSearchParams(new FormData(this)).toString()
             })
             .then(() => {
                 showNotification('¡Mensaje enviado con éxito! Te contactaremos pronto.', 'success');
@@ -152,19 +138,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Función para validar email
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-    
     // Sistema de notificaciones
     function showNotification(message, type = 'info') {
-        // Remover notificaciones existentes
-        const existingNotifications = document.querySelectorAll('.notification');
-        existingNotifications.forEach(notification => notification.remove());
+        document.querySelectorAll('.notification').forEach(n => n.remove());
         
-        // Crear nueva notificación
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.innerHTML = `
@@ -172,22 +149,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span class="notification-message">${message}</span>
                 <button class="notification-close">&times;</button>
             </div>
-        `;
-        
-        // Estilos de la notificación
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            z-index: 10000;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            max-width: 400px;
         `;
         
         document.body.appendChild(notification);
@@ -198,8 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
         
         // Botón de cerrar
-        const closeButton = notification.querySelector('.notification-close');
-        closeButton.addEventListener('click', () => {
+        notification.querySelector('.notification-close').addEventListener('click', () => {
             notification.style.transform = 'translateX(100%)';
             setTimeout(() => notification.remove(), 300);
         });
@@ -213,91 +173,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
     
-    // Botón CTA
+    // Botón CTA — scroll a servicios
     if (ctaButton) {
         ctaButton.addEventListener('click', function() {
             const servicesSection = document.querySelector('#servicios');
             if (servicesSection) {
-                const headerHeight = document.querySelector('.header').offsetHeight;
-                const targetPosition = servicesSection.offsetTop - headerHeight;
-                
                 window.scrollTo({
-                    top: targetPosition,
+                    top: servicesSection.offsetTop - header.offsetHeight,
                     behavior: 'smooth'
                 });
             }
         });
     }
     
-    // Contador animado para estadísticas (comentado)
-    // function animateCounter(element, target, duration = 2000) {
-    //     let start = 15; // Empezar desde 15
-    //     const increment = (target - 15) / (duration / 16);
-    //     
-    //     function updateCounter() {
-    //         start += increment;
-    //         if (start < target) {
-    //             element.textContent = Math.floor(start) + '+';
-    //             requestAnimationFrame(updateCounter);
-    //         } else {
-    //             element.textContent = target + '+';
-    //         }
-    //     }
-    //     
-    //     updateCounter();
-    // }
-    
-    // Estadísticas estáticas (sin animación)
-    // const statsObserver = new IntersectionObserver(function(entries) {
-    //     entries.forEach(entry => {
-    //         if (entry.isIntersecting) {
-    //             const statNumber = entry.target.querySelector('h3');
-    //             const text = statNumber.textContent;
-    //             const number = parseInt(text.replace(/\D/g, ''));
-    //             
-    //             if (number > 0) {
-    //                     statNumber.textContent = '0';
-    //                     animateCounter(statNumber, number);
-    //                 }
-    //                 
-    //                 statsObserver.unobserve(entry.target);
-    //             }
-    //         }, { threshold: 0.5 });
-    //         
-    //         // Observar elementos de estadísticas
-    //         const statElements = document.querySelectorAll('.stat');
-    //         statElements.forEach(stat => {
-    //             statsObserver.observe(stat);
-    //         });
-    
-    // Efecto parallax suave para el hero
-    window.addEventListener('scroll', function() {
-        const scrolled = window.pageYOffset;
-        const hero = document.querySelector('.hero');
-        
-        if (hero) {
-            const rate = scrolled * -0.5;
-            hero.style.transform = `translateY(${rate}px)`;
-        }
-    });
-    
-    // Lazy loading para imágenes (cuando las agregues)
-    const images = document.querySelectorAll('img[data-src]');
-    const imageObserver = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.classList.remove('lazy');
-                imageObserver.unobserve(img);
-            }
-        });
-    });
-    
-    images.forEach(img => imageObserver.observe(img));
-    
-    // Mejoras de accesibilidad
-    // Navegación con teclado
+    // Cerrar menú con Escape
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             hamburger.classList.remove('active');
@@ -305,17 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Prevenir zoom en inputs en iOS
-    const inputs = document.querySelectorAll('input, textarea');
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-                this.style.fontSize = '16px';
-            }
-        });
-    });
-    
-    // Track clicks on WhatsApp and phone links
+    // Track clicks en WhatsApp y teléfono (Analytics)
     document.querySelectorAll('a[href*="wa.me"]').forEach(a => {
         a.addEventListener('click', () => {
             if (window.gtag) {
@@ -339,43 +218,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
-    if (contactForm) {
-        contactForm.addEventListener('submit', function() {
-            if (window.gtag) {
-                gtag('event', 'submit_contact_form', {
-                    event_category: 'lead',
-                    event_label: 'netlify_form_contact',
-                    transport_type: 'beacon'
-                });
-            }
-        });
-    }
-    
-    // Console log para desarrollo
-    console.log('🚀 Sitio web cargado correctamente');
-    console.log('📱 Responsive design activado');
-    console.log('⚡ JavaScript interactivo funcionando');
-    
 });
-
-// Función para detectar si el dispositivo es móvil
-function isMobile() {
-    return window.innerWidth <= 768;
-}
-
-// Función para obtener la posición del scroll
-function getScrollPosition() {
-    return window.pageYOffset || document.documentElement.scrollTop;
-}
-
-// Función para verificar si un elemento está en el viewport
-function isInViewport(element) {
-    const rect = element.getBoundingClientRect();
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
-} 
