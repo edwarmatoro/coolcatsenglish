@@ -5,7 +5,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebas
 import {
     getAuth,
     GoogleAuthProvider,
-    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
@@ -39,8 +40,8 @@ const firebaseConfig = {
 // (see instructions below to get them)
 // ──────────────────────────────────────────────
 const ALLOWED_UIDS = [
-    "EDWAR_UID_HERE",
-    "PAREJA_UID_HERE"
+    "mOaWpDNNlgTd2CAkQ59uck8Q1Uc2",  // edwarmatoro
+    "PAREJA_UID_HERE"                  // pareja (añadir después)
 ];
 
 // ──────────────────────────────────────────────
@@ -100,15 +101,28 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ──────────────────────────────────────────────
-// Sign in with Google
+// Handle redirect result on page load
+// ──────────────────────────────────────────────
+getRedirectResult(auth).then((result) => {
+    if (result?.user) {
+        console.log("✅ Redirect sign-in:", result.user.uid, result.user.email);
+    }
+}).catch((err) => {
+    console.error("❌ Redirect error:", err.code, err.message);
+    authError.textContent = `Error: ${err.code}`;
+});
+
+// ──────────────────────────────────────────────
+// Sign in with Google (redirect)
 // ──────────────────────────────────────────────
 googleSignIn.addEventListener("click", async () => {
     authError.textContent = "";
+    console.log("🔵 Sign in button clicked");
     try {
-        await signInWithPopup(auth, new GoogleAuthProvider());
+        await signInWithRedirect(auth, new GoogleAuthProvider());
     } catch (err) {
-        authError.textContent = "Sign-in failed. Try again.";
-        console.error(err);
+        console.error("❌ Sign-in error:", err.code, err.message);
+        authError.textContent = `Error: ${err.code}`;
     }
 });
 
