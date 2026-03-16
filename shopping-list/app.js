@@ -5,8 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebas
 import {
     getAuth,
     GoogleAuthProvider,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
@@ -101,25 +100,12 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ──────────────────────────────────────────────
-// Handle redirect result on page load
-// ──────────────────────────────────────────────
-getRedirectResult(auth).then((result) => {
-    if (result?.user) {
-        console.log("✅ Redirect sign-in:", result.user.uid, result.user.email);
-    }
-}).catch((err) => {
-    console.error("❌ Redirect error:", err.code, err.message);
-    authError.textContent = `Error: ${err.code}`;
-});
-
-// ──────────────────────────────────────────────
-// Sign in with Google (redirect)
+// Sign in with Google (popup)
 // ──────────────────────────────────────────────
 googleSignIn.addEventListener("click", async () => {
     authError.textContent = "";
-    console.log("🔵 Sign in button clicked");
     try {
-        await signInWithRedirect(auth, new GoogleAuthProvider());
+        await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (err) {
         console.error("❌ Sign-in error:", err.code, err.message);
         authError.textContent = `Error: ${err.code}`;
