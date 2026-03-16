@@ -13,6 +13,7 @@
   for = "/shopping-list/*"
   [headers.values]
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/*.html"
