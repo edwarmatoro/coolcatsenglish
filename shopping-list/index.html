@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping List</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="app">
+        <header class="app-header">
+            <h1>🛒 Shopping List</h1>
+        </header>
+
+        <main>
+            <form class="add-form" id="addForm">
+                <input
+                    type="text"
+                    id="itemInput"
+                    placeholder="Add item..."
+                    autocomplete="off"
+                    required
+                />
+                <button type="submit">Add</button>
+            </form>
+
+            <div class="list-controls">
+                <span id="itemCount" class="item-count"></span>
+                <button id="clearChecked" class="btn-clear">Clear checked</button>
+            </div>
+
+            <ul class="shopping-list" id="shoppingList">
+                <li class="empty-state" id="emptyState">Your list is empty. Add something! 🧺</li>
+            </ul>
+        </main>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>

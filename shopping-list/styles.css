@@ -1,0 +1,236 @@
+/* ── Reset ── */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ── Variables ── */
+:root {
+    --primary:    #0891b2;
+    --primary-dk: #0e7490;
+    --success:    #10b981;
+    --danger:     #ef4444;
+    --bg:         #f0fdfa;
+    --surface:    #ffffff;
+    --text:       #1f2937;
+    --text-light: #6b7280;
+    --border:     #e5e7eb;
+    --radius:     12px;
+    --shadow:     0 2px 8px rgba(0,0,0,0.08);
+    --transition: all 0.2s ease;
+}
+
+/* ── Body ── */
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem 1rem;
+}
+
+/* ── App container ── */
+.app {
+    width: 100%;
+    max-width: 480px;
+}
+
+/* ── Header ── */
+.app-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.app-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+/* ── Add form ── */
+.add-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.add-form input {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    outline: none;
+    transition: var(--transition);
+    background: var(--surface);
+}
+
+.add-form input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
+}
+
+.add-form button {
+    padding: 0.8rem 1.4rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.add-form button:hover {
+    background: var(--primary-dk);
+    transform: translateY(-1px);
+}
+
+/* ── Controls bar ── */
+.list-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    min-height: 28px;
+}
+
+.item-count {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.btn-clear {
+    font-size: 0.8rem;
+    color: var(--danger);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.btn-clear:hover {
+    background: #fee2e2;
+}
+
+/* ── Shopping list ── */
+.shopping-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ── Empty state ── */
+.empty-state {
+    text-align: center;
+    color: var(--text-light);
+    padding: 2rem;
+    font-size: 0.95rem;
+}
+
+/* ── List item ── */
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--surface);
+    padding: 0.9rem 1rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: var(--transition);
+    animation: slideIn 0.2s ease;
+}
+
+.list-item:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Checkbox ── */
+.list-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--success);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* ── Item label ── */
+.item-label {
+    flex: 1;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    word-break: break-word;
+}
+
+.list-item.checked .item-label {
+    text-decoration: line-through;
+    color: var(--text-light);
+}
+
+.list-item.checked {
+    opacity: 0.6;
+}
+
+/* ── Delete button ── */
+.btn-delete {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 6px;
+    line-height: 1;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.btn-delete:hover {
+    color: var(--danger);
+    background: #fee2e2;
+}
+
+/* ── Sync indicator ── */
+.sync-dot {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+}
+
+.sync-dot.offline {
+    background: var(--danger);
+    box-shadow: 0 0 6px var(--danger);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+    body {
+        padding: 1rem 0.75rem;
+    }
+
+    .app-header h1 {
+        font-size: 1.6rem;
+    }
+}
