@@ -8,30 +8,25 @@
 </head>
 <body>
 
-    <!-- PIN screen -->
-    <div class="pin-screen" id="pinScreen">
+    <!-- Auth screen -->
+    <div class="pin-screen" id="authScreen">
         <div class="pin-box">
-            <div class="pin-icon">🔒</div>
+            <div class="pin-icon">�</div>
             <h2>Shopping List</h2>
-            <p>Enter PIN to access</p>
-            <input
-                type="password"
-                id="pinInput"
-                inputmode="numeric"
-                maxlength="6"
-                placeholder="· · · · · ·"
-                autocomplete="off"
-            />
-            <button id="pinSubmit">Unlock</button>
-            <p class="pin-error" id="pinError"></p>
+            <p>Sign in to access your list</p>
+            <button id="googleSignIn" class="btn-google">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20">
+                Sign in with Google
+            </button>
+            <p class="pin-error" id="authError"></p>
         </div>
     </div>
 
-    <!-- App (hidden until PIN is correct) -->
+    <!-- App (hidden until signed in) -->
     <div class="app" id="appContent" style="display:none;">
         <header class="app-header">
             <h1>🛒 Shopping List</h1>
-            <button class="btn-lock" id="lockBtn" title="Lock">🔒</button>
+            <button class="btn-lock" id="signOutBtn" title="Sign out">�</button>
         </header>
 
         <main>

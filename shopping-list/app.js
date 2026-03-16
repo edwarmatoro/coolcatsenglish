@@ -1,61 +1,14 @@
 // ──────────────────────────────────────────────
-// PIN protection
-// Change this PIN to whatever you want
-// ──────────────────────────────────────────────
-const CORRECT_PIN = "1234";
-const SESSION_KEY = "sl_unlocked";
-
-const pinScreen  = document.getElementById("pinScreen");
-const appContent = document.getElementById("appContent");
-const pinInput   = document.getElementById("pinInput");
-const pinSubmit  = document.getElementById("pinSubmit");
-const pinError   = document.getElementById("pinError");
-const lockBtn    = document.getElementById("lockBtn");
-
-function unlock() {
-    sessionStorage.setItem(SESSION_KEY, "1");
-    pinScreen.style.display  = "none";
-    appContent.style.display = "block";
-}
-
-function lock() {
-    sessionStorage.removeItem(SESSION_KEY);
-    pinInput.value           = "";
-    pinError.textContent     = "";
-    appContent.style.display = "none";
-    pinScreen.style.display  = "flex";
-    pinInput.focus();
-}
-
-// Check if already unlocked in this session
-if (sessionStorage.getItem(SESSION_KEY)) {
-    unlock();
-} else {
-    pinInput.focus();
-}
-
-pinSubmit.addEventListener("click", checkPin);
-pinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") checkPin(); });
-lockBtn.addEventListener("click", lock);
-
-function checkPin() {
-    if (pinInput.value === CORRECT_PIN) {
-        unlock();
-    } else {
-        pinError.textContent = "Incorrect PIN. Try again.";
-        pinInput.value = "";
-        pinInput.focus();
-        // Clear error after 2s
-        setTimeout(() => { pinError.textContent = ""; }, 2000);
-    }
-}
-
-// ──────────────────────────────────────────────
-// Firebase configuration
-// Replace the values below with your own config
-// from: Firebase Console → Project settings → Your apps
+// Firebase imports
 // ──────────────────────────────────────────────
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 import {
     getFirestore,
     collection,
@@ -69,6 +22,9 @@ import {
     orderBy
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
+// ──────────────────────────────────────────────
+// Firebase config
+// ──────────────────────────────────────────────
 const firebaseConfig = {
     apiKey:            "AIzaSyDPgwJeDcUnlekEDIEeAB5qRt6AAY22vt4",
     authDomain:        "shopping-list-db55b.firebaseapp.com",
@@ -79,15 +35,30 @@ const firebaseConfig = {
 };
 
 // ──────────────────────────────────────────────
+// Allowed users — add both Google UIDs here
+// (see instructions below to get them)
+// ──────────────────────────────────────────────
+const ALLOWED_UIDS = [
+    "EDWAR_UID_HERE",
+    "PAREJA_UID_HERE"
+];
+
+// ──────────────────────────────────────────────
 // Init Firebase
 // ──────────────────────────────────────────────
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
-const itemsRef = collection(db, "items");
+const firebaseApp = initializeApp(firebaseConfig);
+const auth        = getAuth(firebaseApp);
+const db          = getFirestore(firebaseApp);
+const itemsRef    = collection(db, "items");
 
 // ──────────────────────────────────────────────
 // DOM references
 // ──────────────────────────────────────────────
+const authScreen   = document.getElementById("authScreen");
+const appContent   = document.getElementById("appContent");
+const googleSignIn = document.getElementById("googleSignIn");
+const signOutBtn   = document.getElementById("signOutBtn");
+const authError    = document.getElementById("authError");
 const addForm      = document.getElementById("addForm");
 const itemInput    = document.getElementById("itemInput");
 const shoppingList = document.getElementById("shoppingList");
@@ -95,55 +66,102 @@ const emptyState   = document.getElementById("emptyState");
 const itemCount    = document.getElementById("itemCount");
 const clearChecked = document.getElementById("clearChecked");
 
-// Sync indicator dot
+// Sync dot
 const syncDot = document.createElement("div");
 syncDot.className = "sync-dot";
 document.body.appendChild(syncDot);
 
-// ──────────────────────────────────────────────
-// Real-time listener — Firestore → UI
-// ──────────────────────────────────────────────
-const q = query(itemsRef, orderBy("createdAt", "asc"));
+// Firestore unsubscribe handle
+let unsubscribe = null;
 
-onSnapshot(q,
-    (snapshot) => {
-        syncDot.classList.remove("offline");
-        renderList(snapshot.docs);
-    },
-    () => {
-        syncDot.classList.add("offline");
+// ──────────────────────────────────────────────
+// Auth state listener
+// ──────────────────────────────────────────────
+onAuthStateChanged(auth, (user) => {
+    if (user && ALLOWED_UIDS.includes(user.uid)) {
+        authScreen.style.display = "none";
+        appContent.style.display = "block";
+        authError.textContent    = "";
+        startListening();
+    } else {
+        appContent.style.display = "none";
+        authScreen.style.display = "flex";
+
+        if (user && !ALLOWED_UIDS.includes(user.uid)) {
+            authError.textContent = `⛔ Access denied for ${user.email}`;
+            signOut(auth);
+        }
+
+        if (unsubscribe) {
+            unsubscribe();
+            unsubscribe = null;
+        }
     }
-);
+});
 
+// ──────────────────────────────────────────────
+// Sign in with Google
+// ──────────────────────────────────────────────
+googleSignIn.addEventListener("click", async () => {
+    authError.textContent = "";
+    try {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (err) {
+        authError.textContent = "Sign-in failed. Try again.";
+        console.error(err);
+    }
+});
+
+// ──────────────────────────────────────────────
+// Sign out
+// ──────────────────────────────────────────────
+signOutBtn.addEventListener("click", () => signOut(auth));
+
+// ──────────────────────────────────────────────
+// Real-time Firestore listener
+// ──────────────────────────────────────────────
+function startListening() {
+    if (unsubscribe) return;
+
+    const q = query(itemsRef, orderBy("createdAt", "asc"));
+    unsubscribe = onSnapshot(q,
+        (snapshot) => {
+            syncDot.classList.remove("offline");
+            renderList(snapshot.docs);
+        },
+        () => syncDot.classList.add("offline")
+    );
+}
+
+// ──────────────────────────────────────────────
+// Render list
+// ──────────────────────────────────────────────
 function renderList(docs) {
-    // Remove all list items (keep empty state element)
     shoppingList.querySelectorAll(".list-item").forEach(el => el.remove());
 
     if (docs.length === 0) {
         emptyState.style.display = "block";
-        itemCount.textContent = "";
+        itemCount.textContent    = "";
         return;
     }
 
     emptyState.style.display = "none";
-
     const total   = docs.length;
     const checked = docs.filter(d => d.data().checked).length;
     itemCount.textContent = `${checked}/${total} checked`;
 
     docs.forEach(docSnap => {
         const { text, checked } = docSnap.data();
-        const li = createItemElement(docSnap.id, text, checked);
-        shoppingList.appendChild(li);
+        shoppingList.appendChild(createItemElement(docSnap.id, text, checked));
     });
 }
 
 // ──────────────────────────────────────────────
-// Create a list item DOM element
+// Create list item element
 // ──────────────────────────────────────────────
 function createItemElement(id, text, checked) {
     const li = document.createElement("li");
-    li.className = `list-item${checked ? " checked" : ""}`;
+    li.className  = `list-item${checked ? " checked" : ""}`;
     li.dataset.id = id;
 
     const checkbox = document.createElement("input");
@@ -176,38 +194,26 @@ addForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = itemInput.value.trim();
     if (!text) return;
-
     itemInput.value = "";
     itemInput.focus();
-
-    await addDoc(itemsRef, {
-        text,
-        checked:   false,
-        createdAt: serverTimestamp()
-    });
+    await addDoc(itemsRef, { text, checked: false, createdAt: serverTimestamp() });
 });
 
 // ──────────────────────────────────────────────
-// Toggle checked
+// Toggle / Delete / Clear
 // ──────────────────────────────────────────────
 async function toggleItem(id, checked) {
     await updateDoc(doc(db, "items", id), { checked });
 }
 
-// ──────────────────────────────────────────────
-// Remove single item
-// ──────────────────────────────────────────────
 async function removeItem(id) {
     await deleteDoc(doc(db, "items", id));
 }
 
-// ──────────────────────────────────────────────
-// Clear all checked items
-// ──────────────────────────────────────────────
 clearChecked.addEventListener("click", async () => {
     const snapshot = await new Promise(resolve =>
         onSnapshot(query(itemsRef), resolve, { once: true })
     );
-    const checkedDocs = snapshot.docs.filter(d => d.data().checked);
-    await Promise.all(checkedDocs.map(d => deleteDoc(d.ref)));
+    const toDelete = snapshot.docs.filter(d => d.data().checked);
+    await Promise.all(toDelete.map(d => deleteDoc(d.ref)));
 });
