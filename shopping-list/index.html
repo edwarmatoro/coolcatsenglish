@@ -8,9 +8,30 @@
 </head>
 <body>
 
-    <div class="app">
+    <!-- PIN screen -->
+    <div class="pin-screen" id="pinScreen">
+        <div class="pin-box">
+            <div class="pin-icon">🔒</div>
+            <h2>Shopping List</h2>
+            <p>Enter PIN to access</p>
+            <input
+                type="password"
+                id="pinInput"
+                inputmode="numeric"
+                maxlength="6"
+                placeholder="· · · · · ·"
+                autocomplete="off"
+            />
+            <button id="pinSubmit">Unlock</button>
+            <p class="pin-error" id="pinError"></p>
+        </div>
+    </div>
+
+    <!-- App (hidden until PIN is correct) -->
+    <div class="app" id="appContent" style="display:none;">
         <header class="app-header">
             <h1>🛒 Shopping List</h1>
+            <button class="btn-lock" id="lockBtn" title="Lock">🔒</button>
         </header>
 
         <main>
@@ -34,7 +55,7 @@
                 <li class="empty-state" id="emptyState">Your list is empty. Add something! 🧺</li>
             </ul>
         </main>
-    </div>
+    </div> <!-- /#appContent -->
 
     <!-- Firebase SDK -->
     <script type="module" src="app.js"></script>

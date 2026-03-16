@@ -1,4 +1,56 @@
 // ──────────────────────────────────────────────
+// PIN protection
+// Change this PIN to whatever you want
+// ──────────────────────────────────────────────
+const CORRECT_PIN = "1234";
+const SESSION_KEY = "sl_unlocked";
+
+const pinScreen  = document.getElementById("pinScreen");
+const appContent = document.getElementById("appContent");
+const pinInput   = document.getElementById("pinInput");
+const pinSubmit  = document.getElementById("pinSubmit");
+const pinError   = document.getElementById("pinError");
+const lockBtn    = document.getElementById("lockBtn");
+
+function unlock() {
+    sessionStorage.setItem(SESSION_KEY, "1");
+    pinScreen.style.display  = "none";
+    appContent.style.display = "block";
+}
+
+function lock() {
+    sessionStorage.removeItem(SESSION_KEY);
+    pinInput.value           = "";
+    pinError.textContent     = "";
+    appContent.style.display = "none";
+    pinScreen.style.display  = "flex";
+    pinInput.focus();
+}
+
+// Check if already unlocked in this session
+if (sessionStorage.getItem(SESSION_KEY)) {
+    unlock();
+} else {
+    pinInput.focus();
+}
+
+pinSubmit.addEventListener("click", checkPin);
+pinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") checkPin(); });
+lockBtn.addEventListener("click", lock);
+
+function checkPin() {
+    if (pinInput.value === CORRECT_PIN) {
+        unlock();
+    } else {
+        pinError.textContent = "Incorrect PIN. Try again.";
+        pinInput.value = "";
+        pinInput.focus();
+        // Clear error after 2s
+        setTimeout(() => { pinError.textContent = ""; }, 2000);
+    }
+}
+
+// ──────────────────────────────────────────────
 // Firebase configuration
 // Replace the values below with your own config
 // from: Firebase Console → Project settings → Your apps

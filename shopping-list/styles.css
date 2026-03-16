@@ -1,3 +1,109 @@
+/* ── PIN screen ── */
+.pin-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.pin-box {
+    background: var(--surface);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    width: 100%;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.pin-icon {
+    font-size: 2.5rem;
+}
+
+.pin-box h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.pin-box p {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.pin-box input {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1.5rem;
+    text-align: center;
+    letter-spacing: 0.4rem;
+    outline: none;
+    transition: var(--transition);
+}
+
+.pin-box input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
+}
+
+.pin-box button {
+    padding: 0.85rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.pin-box button:hover {
+    background: var(--primary-dk);
+}
+
+.pin-error {
+    color: var(--danger);
+    font-size: 0.85rem;
+    min-height: 1rem;
+}
+
+/* ── Lock button in header ── */
+.app-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.btn-lock {
+    position: absolute;
+    right: 0;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: var(--transition);
+    padding: 0.25rem;
+    border-radius: 6px;
+}
+
+.btn-lock:hover {
+    opacity: 1;
+    background: var(--border);
+}
+
 /* ── Reset ── */
 *, *::before, *::after {
     margin: 0;
