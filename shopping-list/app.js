@@ -1,14 +1,14 @@
 // ──────────────────────────────────────────────
 // Firebase imports
 // ──────────────────────────────────────────────
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"\;
 import {
     getAuth,
     GoogleAuthProvider,
     signInWithPopup,
     signOut,
     onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js"\;
 import {
     getFirestore,
     collection,
@@ -20,7 +20,7 @@ import {
     serverTimestamp,
     query,
     orderBy
-} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js"\;
 
 // ──────────────────────────────────────────────
 // Firebase config
@@ -35,12 +35,25 @@ const firebaseConfig = {
 };
 
 // ──────────────────────────────────────────────
-// Allowed users — add both Google UIDs here
-// (see instructions below to get them)
+// Allowed users
 // ──────────────────────────────────────────────
 const ALLOWED_UIDS = [
-    "mOaWpDNNlgTd2CAkQ59uck8Q1Uc2",  // edwarmatoro
-    "PAREJA_UID_HERE"                  // pareja (añadir después)
+    "mOaWpDNNlgTd2CAkQ59uck8Q1Uc2",
+    "cEcLQyRnSVcsZ7Tuk5pl0jlHwbu2"
+];
+
+// ──────────────────────────────────────────────
+// Categories (ordered for display)
+// ──────────────────────────────────────────────
+const CATEGORIES = [
+    "Fruta y Verdura",
+    "Lacteos y Huevos",
+    "Carne y Pescado",
+    "Pan y Cereales",
+    "Limpieza e Higiene",
+    "Despensa",
+    "Congelados",
+    "Otros"
 ];
 
 // ──────────────────────────────────────────────
@@ -54,28 +67,28 @@ const itemsRef    = collection(db, "items");
 // ──────────────────────────────────────────────
 // DOM references
 // ──────────────────────────────────────────────
-const authScreen   = document.getElementById("authScreen");
-const appContent   = document.getElementById("appContent");
-const googleSignIn = document.getElementById("googleSignIn");
-const signOutBtn   = document.getElementById("signOutBtn");
-const authError    = document.getElementById("authError");
-const addForm      = document.getElementById("addForm");
-const itemInput    = document.getElementById("itemInput");
-const shoppingList = document.getElementById("shoppingList");
-const emptyState   = document.getElementById("emptyState");
-const itemCount    = document.getElementById("itemCount");
-const clearChecked = document.getElementById("clearChecked");
+const authScreen      = document.getElementById("authScreen");
+const appContent      = document.getElementById("appContent");
+const googleSignIn    = document.getElementById("googleSignIn");
+const signOutBtn      = document.getElementById("signOutBtn");
+const authError       = document.getElementById("authError");
+const addForm         = document.getElementById("addForm");
+const itemInput       = document.getElementById("itemInput");
+const categorySelect  = document.getElementById("categorySelect");
+const shoppingList    = document.getElementById("shoppingList");
+const emptyState      = document.getElementById("emptyState");
+const itemCount       = document.getElementById("itemCount");
+const clearChecked    = document.getElementById("clearChecked");
 
 // Sync dot
 const syncDot = document.createElement("div");
 syncDot.className = "sync-dot";
 document.body.appendChild(syncDot);
 
-// Firestore unsubscribe handle
 let unsubscribe = null;
 
 // ──────────────────────────────────────────────
-// Auth state listener
+// Auth state
 // ──────────────────────────────────────────────
 onAuthStateChanged(auth, (user) => {
     if (user && ALLOWED_UIDS.includes(user.uid)) {
@@ -86,73 +99,84 @@ onAuthStateChanged(auth, (user) => {
     } else {
         appContent.style.display = "none";
         authScreen.style.display = "flex";
-
         if (user && !ALLOWED_UIDS.includes(user.uid)) {
-            authError.textContent = `⛔ Access denied for ${user.email}`;
+            authError.textContent = "Acceso denegado para " + user.email;
             signOut(auth);
         }
-
-        if (unsubscribe) {
-            unsubscribe();
-            unsubscribe = null;
-        }
+        if (unsubscribe) { unsubscribe(); unsubscribe = null; }
     }
 });
 
-// ──────────────────────────────────────────────
-// Sign in with Google (popup)
-// ──────────────────────────────────────────────
 googleSignIn.addEventListener("click", async () => {
     authError.textContent = "";
     try {
         await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (err) {
-        console.error("❌ Sign-in error:", err.code, err.message);
-        authError.textContent = `Error: ${err.code}`;
+        console.error(err.code, err.message);
+        authError.textContent = "Error al iniciar sesión: " + err.code;
     }
 });
 
-// ──────────────────────────────────────────────
-// Sign out
-// ──────────────────────────────────────────────
 signOutBtn.addEventListener("click", () => signOut(auth));
 
 // ──────────────────────────────────────────────
-// Real-time Firestore listener
+// Firestore real-time listener
 // ──────────────────────────────────────────────
 function startListening() {
     if (unsubscribe) return;
-
-    const q = query(itemsRef, orderBy("createdAt", "asc"));
+    const q = query(itemsRef, orderBy("category", "asc"), orderBy("createdAt", "asc"));
     unsubscribe = onSnapshot(q,
-        (snapshot) => {
-            syncDot.classList.remove("offline");
-            renderList(snapshot.docs);
-        },
+        (snapshot) => { syncDot.classList.remove("offline"); renderList(snapshot.docs); },
         () => syncDot.classList.add("offline")
     );
 }
 
 // ──────────────────────────────────────────────
-// Render list
+// Render list grouped by category
 // ──────────────────────────────────────────────
 function renderList(docs) {
-    shoppingList.querySelectorAll(".list-item").forEach(el => el.remove());
+    shoppingList.querySelectorAll(".category-group, .list-item").forEach(el => el.remove());
 
     if (docs.length === 0) {
         emptyState.style.display = "block";
-        itemCount.textContent    = "";
+        itemCount.textContent = "";
         return;
     }
 
     emptyState.style.display = "none";
     const total   = docs.length;
     const checked = docs.filter(d => d.data().checked).length;
-    itemCount.textContent = `${checked}/${total} checked`;
+    itemCount.textContent = checked + "/" + total + " marcados";
+
+    // Group docs by category in CATEGORIES order
+    const grouped = {};
+    CATEGORIES.forEach(cat => { grouped[cat] = []; });
 
     docs.forEach(docSnap => {
-        const { text, checked } = docSnap.data();
-        shoppingList.appendChild(createItemElement(docSnap.id, text, checked));
+        const cat = docSnap.data().category || "Otros";
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(docSnap);
+    });
+
+    CATEGORIES.forEach(cat => {
+        if (grouped[cat].length === 0) return;
+
+        const section = document.createElement("div");
+        section.className = "category-group";
+
+        const heading = document.createElement("h3");
+        heading.className = "category-heading";
+        heading.textContent = cat;
+        section.appendChild(heading);
+
+        const ul = document.createElement("ul");
+        ul.className = "category-items";
+        grouped[cat].forEach(docSnap => {
+            ul.appendChild(createItemElement(docSnap.id, docSnap.data().text, docSnap.data().checked));
+        });
+
+        section.appendChild(ul);
+        shoppingList.appendChild(section);
     });
 }
 
@@ -161,7 +185,7 @@ function renderList(docs) {
 // ──────────────────────────────────────────────
 function createItemElement(id, text, checked) {
     const li = document.createElement("li");
-    li.className  = `list-item${checked ? " checked" : ""}`;
+    li.className  = "list-item" + (checked ? " checked" : "");
     li.dataset.id = id;
 
     const checkbox = document.createElement("input");
@@ -179,8 +203,8 @@ function createItemElement(id, text, checked) {
 
     const deleteBtn = document.createElement("button");
     deleteBtn.className   = "btn-delete";
-    deleteBtn.textContent = "✕";
-    deleteBtn.setAttribute("aria-label", "Delete item");
+    deleteBtn.textContent = "x";
+    deleteBtn.setAttribute("aria-label", "Eliminar");
     deleteBtn.addEventListener("click", () => removeItem(id));
 
     li.append(checkbox, label, deleteBtn);
@@ -192,11 +216,12 @@ function createItemElement(id, text, checked) {
 // ──────────────────────────────────────────────
 addForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const text = itemInput.value.trim();
+    const text     = itemInput.value.trim();
+    const category = categorySelect.value;
     if (!text) return;
     itemInput.value = "";
     itemInput.focus();
-    await addDoc(itemsRef, { text, checked: false, createdAt: serverTimestamp() });
+    await addDoc(itemsRef, { text, category, checked: false, createdAt: serverTimestamp() });
 });
 
 // ──────────────────────────────────────────────

@@ -1,32 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping List</title>
-    <link rel="stylesheet" href="styles.css?v=3">
+    <title>Lista de la Compra</title>
+    <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 
-    <!-- Auth screen -->
+    <--json-dir Auth screen -->
     <div class="pin-screen" id="authScreen">
         <div class="pin-box">
-            <div class="pin-icon">�</div>
-            <h2>Shopping List</h2>
-            <p>Sign in to access your list</p>
+            <div class="pin-icon">&#128722;</div>
+            <h2>Lista de la Compra</h2>
+            <p>Inicia sesión para acceder</p>
             <button id="googleSignIn" class="btn-google">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20">
-                Sign in with Google
+                Entrar con Google
             </button>
             <p class="pin-error" id="authError"></p>
         </div>
     </div>
 
-    <!-- App (hidden until signed in) -->
+    <--json-dir App (hidden until signed in) -->
     <div class="app" id="appContent" style="display:none;">
         <header class="app-header">
-            <h1>🛒 Shopping List</h1>
-            <button class="btn-lock" id="signOutBtn" title="Sign out">�</button>
+            <h1>&#128722; Lista de la Compra</h1>
+            <button class="btn-lock" id="signOutBtn" title="Cerrar sesión">&#128682;</button>
         </header>
 
         <main>
@@ -34,25 +34,35 @@
                 <input
                     type="text"
                     id="itemInput"
-                    placeholder="Add item..."
+                    placeholder="Añadir producto..."
                     autocomplete="off"
                     required
                 />
-                <button type="submit">Add</button>
+                <select id="categorySelect">
+                    <option value="Fruta y Verdura">&#129382; Fruta y Verdura</option>
+                    <option value="Lácteos y Huevos">&#129371; Lácteos y Huevos</option>
+                    <option value="Carne y Pescado">&#129385; Carne y Pescado</option>
+                    <option value="Pan y Cereales">&#129414; Pan y Cereales</option>
+                    <option value="Limpieza e Higiene">&#129396; Limpieza e Higiene</option>
+                    <option value="Despensa">&#129387; Despensa</option>
+                    <option value="Congelados">&#10052; Congelados</option>
+                    <option value="Otros">&#128722; Otros</option>
+                </select>
+                <button type="submit">Añadir</button>
             </form>
 
             <div class="list-controls">
                 <span id="itemCount" class="item-count"></span>
-                <button id="clearChecked" class="btn-clear">Clear checked</button>
+                <button id="clearChecked" class="btn-clear">Eliminar marcados</button>
             </div>
 
-            <ul class="shopping-list" id="shoppingList">
-                <li class="empty-state" id="emptyState">Your list is empty. Add something! 🧺</li>
-            </ul>
+            <div class="shopping-list" id="shoppingList">
+                <p class="empty-state" id="emptyState">La lista está vacía. ¡Añade algo! &#129082;</p>
+            </div>
         </main>
-    </div> <!-- /#appContent -->
+    </div>
 
-    <!-- Firebase SDK -->
-    <script type="module" src="app.js?v=3"></script>
+    <--json-dir Firebase SDK -->
+    <script type="module" src="app.js?v=4"></script>
 </body>
 </html>
