@@ -28,7 +28,7 @@ import {
 // ──────────────────────────────────────────────
 const firebaseConfig = {
     apiKey:            "AIzaSyDPgwJeDcUnlekEDIEeAB5qRt6AAY22vt4",
-    authDomain:        "coolcatsenglish.com",
+    authDomain:        "shopping-list-db55b.firebaseapp.com",
     projectId:         "shopping-list-db55b",
     storageBucket:     "shopping-list-db55b.firebasestorage.app",
     messagingSenderId: "511359469906",
