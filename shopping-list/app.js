@@ -5,8 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebas
 import {
     getAuth,
     GoogleAuthProvider,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
@@ -48,7 +47,7 @@ const ALLOWED_UIDS = [
 // ──────────────────────────────────────────────
 const CATEGORIES = [
     "Fruta y Verdura",
-    "Lacteos y Huevos",
+    "Lácteos y Huevos",
     "Carne y Pescado",
     "Pan y Cereales",
     "Limpieza e Higiene",
@@ -88,15 +87,11 @@ syncDot.className = "sync-dot";
 document.body.appendChild(syncDot);
 
 let unsubscribe = null;
-let redirectHandled = false;
 
 // ──────────────────────────────────────────────
 // Auth state
 // ──────────────────────────────────────────────
 onAuthStateChanged(auth, (user) => {
-    // Si estamos procesando un redirect, esperar
-    if (!redirectHandled) return;
-
     if (user && ALLOWED_UIDS.includes(user.uid)) {
         authScreen.style.display = "none";
         appContent.style.display = "block";
@@ -113,38 +108,25 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Recoger resultado del redirect primero
-getRedirectResult(auth).then((result) => {
-    if (result?.user) {
-        console.log("Login via redirect:", result.user.email);
-    }
-}).catch((err) => {
-    if (err.code && err.code !== "auth/no-current-user") {
-        console.error(err.code, err.message);
-        authError.textContent = "Error: " + err.code;
-    }
-}).finally(() => {
-    // Una vez procesado el redirect (con o sin resultado), activar el listener
-    redirectHandled = true;
-    // Forzar evaluación del estado actual
-    const user = auth.currentUser;
-    if (user && ALLOWED_UIDS.includes(user.uid)) {
-        authScreen.style.display = "none";
-        appContent.style.display = "block";
-        startListening();
-    } else {
-        authScreen.style.display = "flex";
-        appContent.style.display = "none";
-    }
-});
-
 googleSignIn.addEventListener("click", async () => {
     authError.textContent = "";
+    googleSignIn.disabled = true;
+    googleSignIn.textContent = "Abriendo Google...";
     try {
-        await signInWithRedirect(auth, new GoogleAuthProvider());
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        await signInWithPopup(auth, provider);
     } catch (err) {
         console.error(err.code, err.message);
-        authError.textContent = "Error al iniciar sesión: " + err.code;
+        if (err.code === "auth/popup-blocked") {
+            authError.textContent = "El popup fue bloqueado. Permite popups para este sitio en tu navegador.";
+        } else if (err.code === "auth/popup-closed-by-user") {
+            authError.textContent = "Cerraste el popup antes de entrar. Inténtalo de nuevo.";
+        } else {
+            authError.textContent = "Error: " + err.code;
+        }
+        googleSignIn.disabled = false;
+        googleSignIn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20"> Entrar con Google';
     }
 });
 
