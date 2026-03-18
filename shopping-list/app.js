@@ -15,6 +15,7 @@ import {
     addDoc,
     deleteDoc,
     updateDoc,
+    getDocs,
     onSnapshot,
     doc,
     serverTimestamp,
@@ -158,7 +159,7 @@ clearAuthCache.addEventListener("click", async () => {
 // ──────────────────────────────────────────────
 function startListening() {
     if (unsubscribe) return;
-    const q = query(itemsRef, orderBy("category", "asc"), orderBy("createdAt", "asc"));
+    const q = query(itemsRef, orderBy("createdAt", "asc"));
     unsubscribe = onSnapshot(q,
         (snapshot) => { syncDot.classList.remove("offline"); renderList(snapshot.docs); },
         () => syncDot.classList.add("offline")
@@ -270,9 +271,7 @@ async function removeItem(id) {
 }
 
 clearChecked.addEventListener("click", async () => {
-    const snapshot = await new Promise(resolve =>
-        onSnapshot(query(itemsRef), resolve, { once: true })
-    );
+    const snapshot = await getDocs(query(itemsRef));
     const toDelete = snapshot.docs.filter(d => d.data().checked);
     await Promise.all(toDelete.map(d => deleteDoc(d.ref)));
 });
