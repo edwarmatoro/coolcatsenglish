@@ -5,7 +5,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebas
 import {
     getAuth,
     GoogleAuthProvider,
-    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
@@ -111,10 +112,22 @@ onAuthStateChanged(auth, (user) => {
 googleSignIn.addEventListener("click", async () => {
     authError.textContent = "";
     try {
-        await signInWithPopup(auth, new GoogleAuthProvider());
+        await signInWithRedirect(auth, new GoogleAuthProvider());
     } catch (err) {
         console.error(err.code, err.message);
         authError.textContent = "Error al iniciar sesión: " + err.code;
+    }
+});
+
+// Recoger resultado tras el redirect de vuelta
+getRedirectResult(auth).then((result) => {
+    if (result?.user) {
+        console.log("Login via redirect:", result.user.email);
+    }
+}).catch((err) => {
+    if (err.code !== "auth/no-current-user") {
+        console.error(err.code, err.message);
+        authError.textContent = "Error tras redirect: " + err.code;
     }
 });
 
