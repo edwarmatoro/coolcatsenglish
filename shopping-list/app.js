@@ -67,11 +67,12 @@ const itemsRef    = collection(db, "items");
 // ──────────────────────────────────────────────
 // DOM references
 // ──────────────────────────────────────────────
-const authScreen      = document.getElementById("authScreen");
-const appContent      = document.getElementById("appContent");
-const googleSignIn    = document.getElementById("googleSignIn");
-const signOutBtn      = document.getElementById("signOutBtn");
-const authError       = document.getElementById("authError");
+const authScreen     = document.getElementById("authScreen");
+const appContent     = document.getElementById("appContent");
+const googleSignIn   = document.getElementById("googleSignIn");
+const clearAuthCache = document.getElementById("clearAuthCache");
+const signOutBtn     = document.getElementById("signOutBtn");
+const authError      = document.getElementById("authError");
 const addForm         = document.getElementById("addForm");
 const itemInput       = document.getElementById("itemInput");
 const categorySelect  = document.getElementById("categorySelect");
@@ -118,6 +119,27 @@ googleSignIn.addEventListener("click", async () => {
 });
 
 signOutBtn.addEventListener("click", () => signOut(auth));
+
+// ──────────────────────────────────────────────
+// Clear corrupted Auth cache
+// ──────────────────────────────────────────────
+clearAuthCache.addEventListener("click", async () => {
+    try {
+        await signOut(auth);
+    } catch (_) {}
+
+    // Clear all Firebase-related localStorage keys
+    Object.keys(localStorage)
+        .filter(k => k.includes("firebase") || k.includes("firebaseLocalStorage"))
+        .forEach(k => localStorage.removeItem(k));
+
+    // Clear IndexedDB (Firebase stores auth state there)
+    const dbsToDelete = ["firebaseLocalStorageDb", "firebase-heartbeat-database"];
+    dbsToDelete.forEach(name => indexedDB.deleteDatabase(name));
+
+    authError.textContent = "Caché limpiada. Intentando de nuevo...";
+    setTimeout(() => window.location.reload(), 1000);
+});
 
 // ──────────────────────────────────────────────
 // Firestore real-time listener
