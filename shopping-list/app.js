@@ -1,14 +1,14 @@
 // ──────────────────────────────────────────────
 // Firebase imports
 // ──────────────────────────────────────────────
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"\;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
 import {
     getAuth,
     GoogleAuthProvider,
     signInWithPopup,
     signOut,
     onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js"\;
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 import {
     getFirestore,
     collection,
@@ -20,7 +20,7 @@ import {
     serverTimestamp,
     query,
     orderBy
-} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js"\;
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
 // ──────────────────────────────────────────────
 // Firebase config
