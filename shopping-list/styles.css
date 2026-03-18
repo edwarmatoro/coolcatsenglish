@@ -277,6 +277,11 @@ body {
     background: #fee2e2;
 }
 
+.btn-clear-all {
+    opacity: 0.6;
+    font-size: 0.75rem;
+}
+
 /* ── Shopping list ── */
 .shopping-list {
     list-style: none;

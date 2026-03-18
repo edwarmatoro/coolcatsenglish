@@ -81,6 +81,7 @@ const shoppingList    = document.getElementById("shoppingList");
 const emptyState      = document.getElementById("emptyState");
 const itemCount       = document.getElementById("itemCount");
 const clearChecked    = document.getElementById("clearChecked");
+const clearAll        = document.getElementById("clearAll");
 
 // Sync dot
 const syncDot = document.createElement("div");
@@ -274,4 +275,10 @@ clearChecked.addEventListener("click", async () => {
     const snapshot = await getDocs(query(itemsRef));
     const toDelete = snapshot.docs.filter(d => d.data().checked);
     await Promise.all(toDelete.map(d => deleteDoc(d.ref)));
+});
+
+clearAll.addEventListener("click", async () => {
+    if (!confirm("¿Seguro que quieres vaciar toda la lista?")) return;
+    const snapshot = await getDocs(query(itemsRef));
+    await Promise.all(snapshot.docs.map(d => deleteDoc(d.ref)));
 });
