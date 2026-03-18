@@ -88,11 +88,15 @@ syncDot.className = "sync-dot";
 document.body.appendChild(syncDot);
 
 let unsubscribe = null;
+let redirectHandled = false;
 
 // ──────────────────────────────────────────────
 // Auth state
 // ──────────────────────────────────────────────
 onAuthStateChanged(auth, (user) => {
+    // Si estamos procesando un redirect, esperar
+    if (!redirectHandled) return;
+
     if (user && ALLOWED_UIDS.includes(user.uid)) {
         authScreen.style.display = "none";
         appContent.style.display = "block";
@@ -109,6 +113,31 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
+// Recoger resultado del redirect primero
+getRedirectResult(auth).then((result) => {
+    if (result?.user) {
+        console.log("Login via redirect:", result.user.email);
+    }
+}).catch((err) => {
+    if (err.code && err.code !== "auth/no-current-user") {
+        console.error(err.code, err.message);
+        authError.textContent = "Error: " + err.code;
+    }
+}).finally(() => {
+    // Una vez procesado el redirect (con o sin resultado), activar el listener
+    redirectHandled = true;
+    // Forzar evaluación del estado actual
+    const user = auth.currentUser;
+    if (user && ALLOWED_UIDS.includes(user.uid)) {
+        authScreen.style.display = "none";
+        appContent.style.display = "block";
+        startListening();
+    } else {
+        authScreen.style.display = "flex";
+        appContent.style.display = "none";
+    }
+});
+
 googleSignIn.addEventListener("click", async () => {
     authError.textContent = "";
     try {
@@ -116,18 +145,6 @@ googleSignIn.addEventListener("click", async () => {
     } catch (err) {
         console.error(err.code, err.message);
         authError.textContent = "Error al iniciar sesión: " + err.code;
-    }
-});
-
-// Recoger resultado tras el redirect de vuelta
-getRedirectResult(auth).then((result) => {
-    if (result?.user) {
-        console.log("Login via redirect:", result.user.email);
-    }
-}).catch((err) => {
-    if (err.code !== "auth/no-current-user") {
-        console.error(err.code, err.message);
-        authError.textContent = "Error tras redirect: " + err.code;
     }
 });
 
