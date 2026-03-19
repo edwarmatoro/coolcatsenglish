@@ -40,7 +40,8 @@ const firebaseConfig = {
 // ──────────────────────────────────────────────
 const ALLOWED_UIDS = [
     "mOaWpDNNlgTd2CAkQ59uck8Q1Uc2",
-    "cEcLQyRnSVcsZ7Tuk5pl0jlHwbu2"
+    "cEcLQyRnSVcsZ7Tuk5pl0jlHwbu2",
+    "8y0qijBnTeflWPbJV23tY5FfFe63"
 ];
 
 // ──────────────────────────────────────────────
