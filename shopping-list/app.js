@@ -211,7 +211,9 @@ function renderList(docs) {
 
         const ul = document.createElement("ul");
         ul.className = "category-items";
-        grouped[cat].forEach(docSnap => {
+        grouped[cat]
+            .sort((a, b) => (a.data().text || "").localeCompare(b.data().text || "", "es"))
+            .forEach(docSnap => {
             const data = docSnap.data();
             ul.appendChild(createItemElement(docSnap.id, data.text, data.checked, data.purchaseHistory));
         });
