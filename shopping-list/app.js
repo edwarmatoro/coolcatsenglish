@@ -197,8 +197,8 @@ const clearAll        = document.getElementById("clearAll");
 const autoCatHint     = document.getElementById("autoCatHint");
 const suggestions     = document.getElementById("suggestions");
 
-// Known products (populated from Firestore)
-let knownProducts = new Set();
+// Known products map: lowercase name → { id, text, checked }
+let knownProducts = new Map();
 
 // Sync dot
 const syncDot = document.createElement("div");
@@ -331,7 +331,7 @@ function renderList(docs) {
     knownProducts.clear();
     docs.forEach(d => {
         const t = (d.data().text || "").trim();
-        if (t) knownProducts.add(t);
+        if (t) knownProducts.set(t.toLowerCase(), { id: d.id, text: t, checked: !!d.data().checked });
     });
 
     if (docs.length === 0) {
@@ -461,7 +461,8 @@ function showSuggestions(text) {
     if (text.length < 2) { suggestions.style.display = "none"; return; }
 
     const lower = text.toLowerCase();
-    const matches = [...knownProducts]
+    const allNames = [...knownProducts.values()].map(v => v.text);
+    const matches = allNames
         .filter(p => p.toLowerCase().includes(lower))
         .sort((a, b) => {
             // Prioritize products that START with the typed text
@@ -558,12 +559,26 @@ addForm.addEventListener("submit", async (e) => {
     if (!text) return;
     suggestions.style.display = "none";
 
-    // Check for duplicate (case-insensitive)
-    const duplicate = [...knownProducts].some(p => p.toLowerCase() === text.toLowerCase());
-    if (duplicate) {
-        // Brief visual warning
+    // Check if product already exists
+    const existing = knownProducts.get(text.toLowerCase());
+
+    if (existing && !existing.checked) {
+        // Exists but not checked → mark as purchased
+        itemInput.value = "";
+        itemInput.focus();
+        userManuallySelectedCategory = false;
+        autoCatHint.textContent = "✅ Marcado como comprado";
+        autoCatHint.style.color = "#16a34a";
+        categorySelect.value = "Fruta y Verdura";
+        setTimeout(() => { autoCatHint.textContent = ""; autoCatHint.style.color = ""; }, 2000);
+        await toggleItem(existing.id, true);
+        return;
+    }
+
+    if (existing && existing.checked) {
+        // Exists and already checked → warn
         itemInput.style.borderColor = "var(--danger)";
-        autoCatHint.textContent = "⚠️ Ya está en la lista";
+        autoCatHint.textContent = "⚠️ Ya comprado";
         autoCatHint.style.color = "var(--danger)";
         setTimeout(() => {
             itemInput.style.borderColor = "";
@@ -573,7 +588,7 @@ addForm.addEventListener("submit", async (e) => {
         return;
     }
 
-    // Use auto-detected category if user didn't manually change it
+    // New product → add
     const category = userManuallySelectedCategory ? categorySelect.value : guessCategory(text);
     categorySelect.value = category;
     itemInput.value = "";
@@ -908,7 +923,7 @@ scanAddAll.addEventListener("click", () => {
     const newProducts = [];
     const duplicates  = [];
     for (const p of toAdd) {
-        const isDup = [...knownProducts].some(k => k.toLowerCase() === p.name.trim().toLowerCase());
+        const isDup = knownProducts.has(p.name.trim().toLowerCase());
         if (isDup) duplicates.push(p);
         else newProducts.push(p);
     }
