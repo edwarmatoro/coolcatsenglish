@@ -562,29 +562,23 @@ addForm.addEventListener("submit", async (e) => {
     // Check if product already exists
     const existing = knownProducts.get(text.toLowerCase());
 
-    if (existing && !existing.checked) {
-        // Exists but not checked → mark as purchased
+    if (existing) {
+        // Product exists → mark as purchased (add purchase date)
         itemInput.value = "";
         itemInput.focus();
         userManuallySelectedCategory = false;
-        autoCatHint.textContent = "✅ Marcado como comprado";
-        autoCatHint.style.color = "#16a34a";
         categorySelect.value = "Fruta y Verdura";
-        setTimeout(() => { autoCatHint.textContent = ""; autoCatHint.style.color = ""; }, 2000);
-        await toggleItem(existing.id, true);
-        return;
-    }
 
-    if (existing && existing.checked) {
-        // Exists and already checked → warn
-        itemInput.style.borderColor = "var(--danger)";
-        autoCatHint.textContent = "⚠️ Ya comprado";
-        autoCatHint.style.color = "var(--danger)";
-        setTimeout(() => {
-            itemInput.style.borderColor = "";
-            autoCatHint.textContent = "";
-            autoCatHint.style.color = "";
-        }, 2000);
+        if (existing.checked) {
+            autoCatHint.textContent = "🛒 Nueva compra registrada";
+        } else {
+            autoCatHint.textContent = "✅ Marcado como comprado";
+        }
+        autoCatHint.style.color = "#16a34a";
+        setTimeout(() => { autoCatHint.textContent = ""; autoCatHint.style.color = ""; }, 2000);
+
+        // Always register purchase: mark checked + add timestamp
+        await toggleItem(existing.id, true);
         return;
     }
 
