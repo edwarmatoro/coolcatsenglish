@@ -700,9 +700,13 @@ function renderScanResults(products) {
         cb.checked = p.selected;
         cb.addEventListener("change", () => { detectedProducts[i].selected = cb.checked; });
 
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "scan-item-name";
-        nameSpan.textContent = p.name;
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.className = "scan-item-name-input";
+        nameInput.value = p.name;
+        nameInput.addEventListener("input", () => {
+            detectedProducts[i].name = nameInput.value.trim();
+        });
 
         const removeBtn = document.createElement("button");
         removeBtn.className = "scan-item-remove";
@@ -712,7 +716,7 @@ function renderScanResults(products) {
             renderScanResults(detectedProducts);
         });
 
-        li.append(cb, nameSpan, removeBtn);
+        li.append(cb, nameInput, removeBtn);
         scanResultsList.appendChild(li);
     });
 }
@@ -721,7 +725,7 @@ function renderScanResults(products) {
 // Add scanned products to Firestore
 // ──────────────────────────────────────────────
 scanAddAll.addEventListener("click", async () => {
-    const toAdd = detectedProducts.filter(p => p.selected);
+    const toAdd = detectedProducts.filter(p => p.selected && p.name.trim());
     if (toAdd.length === 0) return;
 
     scanAddAll.disabled = true;
