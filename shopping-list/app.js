@@ -62,6 +62,114 @@ const CATEGORIES = [
 ];
 
 // ──────────────────────────────────────────────
+// Auto-categorization dictionary
+// ──────────────────────────────────────────────
+const AUTO_CATEGORY = {
+    "Fruta y Verdura": [
+        "acelga","aguacate","ajo","apio","berenjena","berro","brócoli","brécol",
+        "calabacín","calabaza","cebolla","cebolleta","cereza","champiñón","ciruela",
+        "clementina","col","coliflor","dátil","endivia","espárrago","espinaca",
+        "frambuesa","fresa","fresón","granada","guisante","higo","judía verde",
+        "kiwi","lechuga","limón","mandarina","mango","manzana","melocotón","melón",
+        "mora","naranja","nectarina","níspero","papaya","patata","pepino","pera",
+        "perejil","pimiento","piña","plátano","pomelo","puerro","rábano","remolacha",
+        "repollo","rúcula","sandía","seta","tomate","uva","zanahoria","arándano",
+        "alcachofa","boniato","maíz dulce","canónigos","jengibre","lima","coco",
+        "hierbabuena","cilantro","albahaca","romero","tomillo","menta","eneldo",
+        "pisto","menestra","verdura","fruta","ensalada","migas de coliflor",
+        "pisto de verduras"
+    ],
+    "Lácteos y Huevos": [
+        "leche","yogur","yogurt","queso","mantequilla","margarina","nata","natilla",
+        "flan","cuajada","requesón","kéfir","huevo","huevos","crema","batido",
+        "helado","mozzarella","parmesano","queso fresco","queso rallado",
+        "leche entera","leche desnatada","leche semidesnatada","leche sin lactosa",
+        "queso manchego","queso de cabra","queso cremoso","petit suisse",
+        "chocolate con leche","choco-leche"
+    ],
+    "Carne y Pescado": [
+        "pollo","ternera","cerdo","cordero","pavo","conejo","buey","hamburguesa",
+        "salchicha","chorizo","jamón","lomo","costilla","chuleta","filete",
+        "pechuga","muslo","alita","carne picada","carne","bacon","panceta",
+        "morcilla","longaniza","fuet","salchichón","mortadela",
+        "salmón","atún","merluza","bacalao","sardina","anchoa","boquerón",
+        "gamba","langostino","mejillón","calamar","pulpo","sepia","lubina",
+        "dorada","trucha","rape","lenguado","pescado","marisco",
+        "pechuga de pavo","jamón serrano","jamón cocido","jamón york"
+    ],
+    "Pan y Cereales": [
+        "pan","baguette","chapata","pan de molde","pan integral","pan rallado",
+        "tostada","biscote","cereal","cereales","muesli","granola","avena",
+        "arroz","pasta","espagueti","macarrón","macarrones","tallarín","fideos",
+        "lasaña","tortellini","ravioli","cuscús","quinoa","trigo",
+        "harina","galleta","galletas","magdalena","croissant","bizcocho",
+        "cereal trigo entero","rosquilla","donut"
+    ],
+    "Limpieza e Higiene": [
+        "jabón","champú","gel","desodorante","pasta de dientes","crema dental",
+        "cepillo","pañuelo","pañal","compresa","tampón","algodón",
+        "papel higiénico","toallita","esponja","fregasuelos","lejía",
+        "lavavajillas","detergente","suavizante","limpiador","amoniaco",
+        "bolsa de basura","bolsas de basura","estropajo","bayeta","escoba",
+        "recambio fregona","guante","ambientador","insecticida",
+        "crema hidratante","protector solar","maquinilla","cuchilla",
+        "bastoncillo","hilo dental","colonia","perfume",
+        "discos activos","b. basura","papel de cocina","servilleta",
+        "film transparente","papel de aluminio","papel aluminio","arena"
+    ],
+    "Despensa": [
+        "aceite","vinagre","sal","azúcar","pimienta","especias","orégano",
+        "pimentón","comino","canela","curry","cúrcuma","laurel",
+        "tomate frito","tomate triturado","tomate natural","salsa",
+        "mayonesa","kétchup","mostaza","soja","miel","mermelada",
+        "cacao","café","té","infusión","chocolate","chocolate puro",
+        "chocolate almendra","cápsulas","nespresso",
+        "atún en lata","conserva","legumbre","lenteja","garbanzo",
+        "alubia","judía","aceituna","pepinillo","maíz",
+        "agua","agua mineral","zumo","refresco","cerveza","vino",
+        "caldo","sopa","puré","leche condensada","levadura",
+        "gelatina","almendra","nuez","cacahuete","pipa","anacardo",
+        "fruto seco","turrón","patatas fritas","snack","palomitas",
+        "cola cao","colacao","nocilla","nutella"
+    ],
+    "Congelados": [
+        "congelado","congelada","pizza","croqueta","empanada","empanadilla",
+        "nugget","palito de pescado","guisante congelado","menestra congelada",
+        "helado","polo","sorbete","verdura congelada","marisco congelado",
+        "patata congelada","san jacobo","varitas","fingers"
+    ]
+};
+
+// Build lookup: normalized word → category
+const _categoryLookup = {};
+for (const [cat, words] of Object.entries(AUTO_CATEGORY)) {
+    for (const w of words) {
+        _categoryLookup[w.toLowerCase()] = cat;
+    }
+}
+
+/**
+ * Guess category for a product name.
+ * Tries exact match first, then partial (longest match wins).
+ */
+function guessCategory(productName) {
+    const lower = productName.toLowerCase().trim();
+
+    // Exact match
+    if (_categoryLookup[lower]) return _categoryLookup[lower];
+
+    // Try matching from longest dictionary entries first
+    const entries = Object.keys(_categoryLookup).sort((a, b) => b.length - a.length);
+    for (const key of entries) {
+        if (lower.includes(key) || key.includes(lower)) {
+            return _categoryLookup[key];
+        }
+    }
+
+    return "Otros";
+}
+
+// ──────────────────────────────────────────────
 // Init Firebase
 // ──────────────────────────────────────────────
 const firebaseApp = initializeApp(firebaseConfig);
@@ -86,6 +194,7 @@ const emptyState      = document.getElementById("emptyState");
 const itemCount       = document.getElementById("itemCount");
 const clearChecked    = document.getElementById("clearChecked");
 const clearAll        = document.getElementById("clearAll");
+const autoCatHint     = document.getElementById("autoCatHint");
 
 // Sync dot
 const syncDot = document.createElement("div");
@@ -273,15 +382,41 @@ function createItemElement(id, text, checked, purchaseHistory) {
 }
 
 // ──────────────────────────────────────────────
+// Auto-categorize as user types
+// ──────────────────────────────────────────────
+let userManuallySelectedCategory = false;
+
+categorySelect.addEventListener("change", () => {
+    userManuallySelectedCategory = true;
+});
+
+itemInput.addEventListener("input", () => {
+    if (userManuallySelectedCategory) return;
+    const text = itemInput.value.trim();
+    if (text.length < 2) {
+        autoCatHint.textContent = "";
+        return;
+    }
+    const cat = guessCategory(text);
+    categorySelect.value = cat;
+    autoCatHint.textContent = cat !== "Otros" ? "→ " + cat : "";
+});
+
+// ──────────────────────────────────────────────
 // Add item
 // ──────────────────────────────────────────────
 addForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const text     = itemInput.value.trim();
-    const category = categorySelect.value;
+    const text = itemInput.value.trim();
     if (!text) return;
+    // Use auto-detected category if user didn't manually change it
+    const category = userManuallySelectedCategory ? categorySelect.value : guessCategory(text);
+    categorySelect.value = category;
     itemInput.value = "";
     itemInput.focus();
+    userManuallySelectedCategory = false;
+    autoCatHint.textContent = "";
+    categorySelect.value = "Fruta y Verdura"; // reset to first
     await addDoc(itemsRef, { text, category, checked: false, createdAt: serverTimestamp() });
 });
 
@@ -595,7 +730,7 @@ scanAddAll.addEventListener("click", async () => {
     const promises = toAdd.map(p =>
         addDoc(itemsRef, {
             text: p.name,
-            category: "Otros",
+            category: guessCategory(p.name),
             checked: false,
             createdAt: serverTimestamp()
         })

@@ -248,6 +248,16 @@ body {
     gap: 0.4rem;
 }
 
+/* ── Auto-category hint ── */
+.auto-cat-hint {
+    width: 100%;
+    font-size: 0.75rem;
+    color: var(--primary);
+    opacity: 0.8;
+    min-height: 1.1em;
+    transition: var(--transition);
+}
+
 /* ── Controls bar ── */
 .list-controls {
     display: flex;
