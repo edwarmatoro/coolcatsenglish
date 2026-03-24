@@ -20,6 +20,8 @@ import {
     doc,
     serverTimestamp,
     deleteField,
+    arrayUnion,
+    Timestamp,
     query,
     orderBy
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
@@ -211,7 +213,7 @@ function renderList(docs) {
         ul.className = "category-items";
         grouped[cat].forEach(docSnap => {
             const data = docSnap.data();
-            ul.appendChild(createItemElement(docSnap.id, data.text, data.checked, data.checkedAt));
+            ul.appendChild(createItemElement(docSnap.id, data.text, data.checked, data.purchaseHistory));
         });
 
         section.appendChild(ul);
@@ -222,7 +224,7 @@ function renderList(docs) {
 // ──────────────────────────────────────────────
 // Create list item element
 // ──────────────────────────────────────────────
-function createItemElement(id, text, checked, checkedAt) {
+function createItemElement(id, text, checked, purchaseHistory) {
     const li = document.createElement("li");
     li.className  = "list-item" + (checked ? " checked" : "");
     li.dataset.id = id;
@@ -245,14 +247,16 @@ function createItemElement(id, text, checked, checkedAt) {
 
     textWrapper.appendChild(label);
 
-    if (checked && checkedAt) {
-        const date = checkedAt.toDate ? checkedAt.toDate() : new Date(checkedAt);
-        const dateStr = date.toLocaleDateString("es-ES", {
-            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+    if (purchaseHistory && purchaseHistory.length > 0) {
+        const dates = purchaseHistory.map(ts => {
+            const d = ts.toDate ? ts.toDate() : new Date(ts);
+            return d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
         });
+        // Eliminar fechas duplicadas (mismo día)
+        const uniqueDates = [...new Set(dates)];
         const dateSpan = document.createElement("span");
         dateSpan.className = "item-checked-date";
-        dateSpan.textContent = "Compra hecha: " + dateStr;
+        dateSpan.textContent = "🛒 Compra: " + uniqueDates.join(", ");
         textWrapper.appendChild(dateSpan);
     }
 
@@ -286,6 +290,7 @@ async function toggleItem(id, checked) {
     const data = { checked };
     if (checked) {
         data.checkedAt = serverTimestamp();
+        data.purchaseHistory = arrayUnion(Timestamp.now());
     } else {
         data.checkedAt = deleteField();
     }
