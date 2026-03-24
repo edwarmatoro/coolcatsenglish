@@ -930,9 +930,15 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
         const dx = e.touches[0].clientX - touchStartX;
         const dy = e.touches[0].clientY - touchStartY;
 
-        // Lock direction once finger has moved enough (15px threshold)
-        if (!directionLocked && (Math.abs(dx) > 15 || Math.abs(dy) > 15)) {
-            directionLocked = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        // Lock direction once finger has moved enough
+        if (!directionLocked) {
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+            // Need at least 25px total movement to decide
+            if (absDx > 25 || absDy > 15) {
+                // Must be clearly horizontal: dx > 2× dy
+                directionLocked = (absDx > absDy * 2 && absDx > 25) ? "h" : "v";
+            }
         }
 
         // If scrolling vertically, do nothing
