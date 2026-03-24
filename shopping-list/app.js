@@ -430,47 +430,69 @@ function parseTicket(rawText) {
     const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
     const products = [];
 
-    // Palabras/patrones a ignorar (cabeceras, totales, datos tienda, etc.)
+    // Líneas completas a descartar
     const skipPatterns = [
-        /^(total|subtotal|iva|i\.v\.a|base|imponible|cambio|efectivo|tarjeta|visa|mastercard)/i,
-        /^(nif|cif|c\.i\.f|tel[eé]f|factura|ticket|n[uú]m|fecha|hora|caja|op\.|tienda)/i,
-        /^(gracias|bienvenid|atendid|le\s+ha\s+atendido|vuelva|fidelidad)/i,
-        /^(dto|descuento|ahorro|promo|oferta|tarjeta\s+cl)/i,
-        /^(mercadona|lidl|carrefour|aldi|dia|eroski|alcampo|hipercor|bonpreu|condis|caprabo|consum)/i,
-        /^(supermercado|s\.a\.|s\.l\.|sociedad|direc)/i,
-        /^\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/,     // Fechas
-        /^\d{5,}/,                                // Códigos largos
-        /^[\d\s.,€$%]+$/,                         // Solo números/precios
-        /^\*+/,                                   // Separadores
-        /^-+$/,                                   // Separadores
-        /^=+$/,                                   // Separadores
-        /^[A-Z]{1,3}\d{6,}/,                     // Códigos de barras
-        /^\d+[xX]\s/,                            // "2x ..." cantidad
+        /^(total|subtotal|iva|i\.v\.a|base\s*impon|cambio|efectivo|tarjeta|visa|mastercard|importe)/i,
+        /^(nif|cif|c\.i\.f|tel[eé]f|factura|ticket|n[uú]m|fecha|hora|caja|op[\.:]\s*\d)/i,
+        /^(gracias|bienvenid|atendid|le\s+ha\s+atendido|vuelva|fidelidad|cliente)/i,
+        /^(dto\.?|descuento|ahorro|promo|oferta|tarjeta\s+(cl|banc))/i,
+        /^(mercadona|lidl|carrefour|aldi|dia\b|eroski|alcampo|hipercor|bonpreu|condis|caprabo|consum)/i,
+        /^(supermercado|s\.a\.|s\.l\.|sociedad|direc|www\.|http)/i,
+        /^(descripci[oó]n|p[\.\s]*unit|unid|precio|imp[\.\s]*€)/i,
+        /^\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/,           // Fechas: 22/03/2022
+        /^\d{5,}/,                                      // Códigos largos
+        /^[\d\s.,€$%()]+$/,                             // Solo números/precios
+        /^[\*\-=_\.]{3,}$/,                             // Separadores
+        /^[A-Z]{1,3}\d{6,}/,                           // Códigos de barras
+        /^op\s*:/i,                                     // OP: 100020
     ];
 
-    for (const line of lines) {
-        // Ignorar líneas muy cortas o muy largas
-        if (line.length < 3 || line.length > 60) continue;
+    // Regex para línea de producto: "2 AGUA MINERAL  0,63  1,26"
+    const productLineRegex = /^(\d+\s+)?([A-ZÁÉÍÓÚÑa-záéíóúñ][\w\s.\-\/(),áéíóúñÁÉÍÓÚÑ]+?)(?:\s{2,}|\s+)(\d+[.,]\d{2})\s*(?:[€]?\s*(\d+[.,]\d{2})?\s*[€]?)?$/;
 
-        // Comprobar si es línea a ignorar
+    for (const line of lines) {
+        if (line.length < 3 || line.length > 80) continue;
         if (skipPatterns.some(p => p.test(line))) continue;
 
-        // Extraer nombre del producto:
-        // Los tickets suelen tener: NOMBRE_PRODUCTO  PRECIO
-        // Quitamos precio del final (números con , o . como decimales)
-        let name = line
-            .replace(/\s+\d+[.,]\d{2}\s*[€]?\s*$/,  "")  // "  2,35 €" al final
-            .replace(/\s+\d+[.,]\d{2}$/,              "")  // "  2.35" al final
-            .replace(/^\d+\s+/,                        "")  // "2 " al inicio (cantidad)
-            .replace(/^\d+[.,]\d{3}\s*/,               "")  // código tipo "123.456"
-            .replace(/\s{2,}/g,                        " ") // múltiples espacios
+        let name = null;
+
+        // Intento 1: regex estructurado
+        const match = line.match(productLineRegex);
+        if (match) {
+            name = match[2].trim();
+        }
+
+        // Intento 2: limpiar manualmente
+        if (!name) {
+            name = line
+                .replace(/\s+\d+[.,]\d{2}\s*[€]?\s*/g, " ")  // Quitar precios
+                .replace(/^\d+\s+/,                       "")   // Quitar cantidad "2 "
+                .replace(/\s*[—–\-]{2,}\s*/g,             "")   // Guiones largos
+                .replace(/\s*\d{2,}\s*$/,                 "")   // Números sueltos al final
+                .replace(/\s{2,}/g,                       " ")
+                .trim();
+        }
+
+        if (!name || name.length < 3) continue;
+
+        // Limpiar caracteres basura de OCR
+        name = name
+            .replace(/[£|{}~`¢¥°©®™\[\]<>]/g, "")
+            .replace(/\b\d{2,}\b/g, "")
+            .replace(/\s{2,}/g, " ")
             .trim();
 
-        // Ignorar si quedó vacío, solo números, o muy corto
-        if (!name || name.length < 3 || /^[\d\s.,€%]+$/.test(name)) continue;
+        if (!name || name.length < 3) continue;
+        if (/^[\d\s.,€$%\-]+$/.test(name)) continue;
+        if (/^(descripci|p[\.\s]*unit|importe|unid)/i.test(name)) continue;
 
-        // Capitalizar: primera letra mayúscula, resto minúscula
-        name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        // Capitalizar cada palabra
+        name = name.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+
+        // Expandir abreviaturas comunes
+        name = expandAbbreviations(name);
+
+        if (!name || name.length < 3) continue;
 
         // Evitar duplicados
         if (!products.some(p => p.name.toLowerCase() === name.toLowerCase())) {
@@ -479,6 +501,54 @@ function parseTicket(rawText) {
     }
 
     return products;
+}
+
+// ──────────────────────────────────────────────
+// Expand common Spanish supermarket abbreviations
+// ──────────────────────────────────────────────
+function expandAbbreviations(name) {
+    const abbrevs = [
+        [/\bAgua Min\b/i,              "Agua Mineral"],
+        [/\bChoco[\.\-\s]?Leche\b/i,   "Chocolate Con Leche"],
+        [/\bChoco\s+Almendra\b/i,       "Chocolate Almendra"],
+        [/\bCap\.\s*/i,                 "Cápsulas "],
+        [/\bC\.\s+/i,                   "Café "],
+        [/\bC,\s+/i,                    "Café "],
+        [/\b1£,\s*/i,                   "Café "],
+        [/\bB\.\s*Basura\b/i,           "Bolsas De Basura"],
+        [/\bB\.basura\b/i,              "Bolsas De Basura"],
+        [/\bExt\.?\s*C\.?\s*F[aá]cil\b/i, "Extra Cierre Fácil"],
+        [/\bAlum\b/i,                   "Aluminio"],
+        [/\bAlu\b/i,                    "Aluminio"],
+        [/\bDob\.\s*/i,                 "Doble "],
+        [/\bPechuga\s+Pr\s*Me\b/i,      "Pechuga De Pavo Al Horno"],
+        [/\bPechuga\s+Pavo\b/i,         "Pechuga De Pavo"],
+        [/\bMigas\s+De\s+Co\s*Me\b/i,   "Migas De Coliflor"],
+        [/\bMigas\s+De\s+Co\b/i,        "Migas De Coliflor"],
+        [/\bPisto\s+De\s+Ve\b/i,        "Pisto De Verduras"],
+        [/\bDiscos\s+Act\b/i,           "Discos Activos"],
+        [/\bDiscos\s+A\b/i,             "Discos Activos"],
+        [/\bLch\b/i,                    "Leche"],
+        [/\bEntr\b/i,                   "Entera"],
+        [/\bDesn\b/i,                   "Desnatada"],
+        [/\bSemid\b/i,                  "Semidesnatada"],
+        [/\bYog\b/i,                    "Yogur"],
+        [/\bMant\b/i,                   "Mantequilla"],
+        [/\bJam[oó]n?\s*S\b/i,          "Jamón Serrano"],
+        [/\bJam[oó]n?\s*C\b/i,          "Jamón Cocido"],
+        [/\bAceit\.\s*/i,               "Aceite "],
+        [/\bOliv\.\s*/i,                "Oliva "],
+        [/\bVirg\.\s*/i,                "Virgen "],
+        [/\bExtra\.\s*/i,               "Extra "],
+        [/\bAldo\s+E\s+Ne\b/i,          ""],
+        [/\bPuro\s*[—–\-]+\s*,?\s*$/i,  "Puro"],
+    ];
+
+    for (const [pattern, replacement] of abbrevs) {
+        name = name.replace(pattern, replacement);
+    }
+
+    return name.replace(/\s{2,}/g, " ").trim();
 }
 
 // ──────────────────────────────────────────────
