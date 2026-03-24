@@ -629,6 +629,8 @@ const scanProgressText = document.getElementById("scanProgressText");
 const scanResults    = document.getElementById("scanResults");
 const scanResultsList = document.getElementById("scanResultsList");
 const scanAddAll     = document.getElementById("scanAddAll");
+const scanConfirmAdd = document.getElementById("scanConfirmAdd");
+const scanSummary    = document.getElementById("scanSummary");
 const scanCancel     = document.getElementById("scanCancel");
 
 let tesseractLoaded = false;
@@ -656,10 +658,16 @@ function resetScanUI() {
     scanResults.style.display = "none";
     scanUploadLabel.style.display = "flex";
     scanResultsList.innerHTML = "";
+    scanResultsList.style.display = "";
     scanFileInput.value = "";
     detectedProducts = [];
+    productsToConfirm = [];
     scanAddAll.disabled = false;
+    scanAddAll.style.display = "";
     scanAddAll.textContent = "✓ Añadir todos";
+    scanSummary.style.display = "none";
+    scanSummary.innerHTML = "";
+    scanConfirmAdd.style.display = "none";
 }
 
 // Load Tesseract.js lazily
@@ -888,29 +896,64 @@ function renderScanResults(products) {
 }
 
 // ──────────────────────────────────────────────
-// Add scanned products to Firestore
+// Add scanned products to Firestore (2-step: review → confirm)
 // ──────────────────────────────────────────────
-scanAddAll.addEventListener("click", async () => {
+let productsToConfirm = [];
+
+scanAddAll.addEventListener("click", () => {
     const toAdd = detectedProducts.filter(p => p.selected && p.name.trim());
     if (toAdd.length === 0) return;
 
-    scanAddAll.disabled = true;
-    scanAddAll.textContent = "Añadiendo...";
-
-    // Filter out duplicates already in the list
-    const newOnly = toAdd.filter(p =>
-        ![...knownProducts].some(k => k.toLowerCase() === p.name.trim().toLowerCase())
-    );
-
-    if (newOnly.length === 0) {
-        scanAddAll.textContent = "⚠️ Ya están todos en la lista";
-        setTimeout(() => closeScanModal(), 1500);
-        return;
+    // Classify: new vs duplicates
+    const newProducts = [];
+    const duplicates  = [];
+    for (const p of toAdd) {
+        const isDup = [...knownProducts].some(k => k.toLowerCase() === p.name.trim().toLowerCase());
+        if (isDup) duplicates.push(p);
+        else newProducts.push(p);
     }
 
-    const skipped = toAdd.length - newOnly.length;
+    // Build summary HTML
+    let html = "";
+    if (newProducts.length > 0) {
+        html += `<p class="scan-summary-title new">✅ Se añadirán (${newProducts.length}):</p><ul class="scan-summary-list new">`;
+        for (const p of newProducts) {
+            const cat = guessCategory(p.name);
+            html += `<li>${p.name} <span class="scan-summary-cat">→ ${cat}</span></li>`;
+        }
+        html += `</ul>`;
+    }
+    if (duplicates.length > 0) {
+        html += `<p class="scan-summary-title dup">⚠️ Ya en la lista (${duplicates.length}):</p><ul class="scan-summary-list dup">`;
+        for (const p of duplicates) html += `<li>${p.name}</li>`;
+        html += `</ul>`;
+    }
+    if (newProducts.length === 0) {
+        html += `<p class="scan-summary-empty">No hay productos nuevos que añadir.</p>`;
+    }
 
-    const promises = newOnly.map(p =>
+    scanSummary.innerHTML = html;
+    scanSummary.style.display = "block";
+    scanResultsList.style.display = "none";
+
+    // Toggle buttons
+    scanAddAll.style.display = "none";
+    if (newProducts.length > 0) {
+        scanConfirmAdd.style.display = "";
+        scanConfirmAdd.textContent = `✓ Confirmar (${newProducts.length})`;
+        scanConfirmAdd.disabled = false;
+    }
+
+    productsToConfirm = newProducts;
+});
+
+scanConfirmAdd.addEventListener("click", async () => {
+    if (productsToConfirm.length === 0) return;
+
+    scanConfirmAdd.disabled = true;
+    scanConfirmAdd.textContent = "Añadiendo...";
+
+    const promises = productsToConfirm.map(p =>
         addDoc(itemsRef, {
             text: p.name,
             category: guessCategory(p.name),
@@ -920,11 +963,6 @@ scanAddAll.addEventListener("click", async () => {
     );
 
     await Promise.all(promises);
-
-    if (skipped > 0) {
-        scanAddAll.textContent = `✓ ${newOnly.length} añadidos, ${skipped} ya existían`;
-        setTimeout(() => closeScanModal(), 1500);
-    } else {
-        closeScanModal();
-    }
+    productsToConfirm = [];
+    closeScanModal();
 });

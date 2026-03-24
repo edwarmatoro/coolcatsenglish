@@ -732,6 +732,64 @@ body {
     font-weight: 700;
 }
 
+/* ── Scan summary (review before adding) ── */
+.scan-summary {
+    margin-top: 0.75rem;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.scan-summary-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin: 0.6rem 0 0.3rem;
+}
+
+.scan-summary-title.new {
+    color: #16a34a;
+}
+
+.scan-summary-title.dup {
+    color: #d97706;
+}
+
+.scan-summary-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+}
+
+.scan-summary-list li {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.88rem;
+    border-radius: 4px;
+    margin-bottom: 2px;
+}
+
+.scan-summary-list.new li {
+    background: rgba(22, 163, 74, 0.08);
+    color: var(--text);
+}
+
+.scan-summary-list.dup li {
+    background: rgba(217, 119, 6, 0.08);
+    color: var(--text-light);
+    text-decoration: line-through;
+}
+
+.scan-summary-cat {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    margin-left: 0.3rem;
+}
+
+.scan-summary-empty {
+    text-align: center;
+    color: var(--text-light);
+    font-style: italic;
+    padding: 1rem 0;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1024px) {
     .shopping-list {
