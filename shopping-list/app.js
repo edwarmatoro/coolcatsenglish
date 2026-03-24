@@ -557,6 +557,22 @@ addForm.addEventListener("submit", async (e) => {
     const text = itemInput.value.trim();
     if (!text) return;
     suggestions.style.display = "none";
+
+    // Check for duplicate (case-insensitive)
+    const duplicate = [...knownProducts].some(p => p.toLowerCase() === text.toLowerCase());
+    if (duplicate) {
+        // Brief visual warning
+        itemInput.style.borderColor = "var(--danger)";
+        autoCatHint.textContent = "⚠️ Ya está en la lista";
+        autoCatHint.style.color = "var(--danger)";
+        setTimeout(() => {
+            itemInput.style.borderColor = "";
+            autoCatHint.textContent = "";
+            autoCatHint.style.color = "";
+        }, 2000);
+        return;
+    }
+
     // Use auto-detected category if user didn't manually change it
     const category = userManuallySelectedCategory ? categorySelect.value : guessCategory(text);
     categorySelect.value = category;
@@ -879,7 +895,12 @@ scanAddAll.addEventListener("click", async () => {
     scanAddAll.disabled = true;
     scanAddAll.textContent = "Añadiendo...";
 
-    const promises = toAdd.map(p =>
+    // Filter out duplicates already in the list
+    const newOnly = toAdd.filter(p =>
+        ![...knownProducts].some(k => k.toLowerCase() === p.name.trim().toLowerCase())
+    );
+
+    const promises = newOnly.map(p =>
         addDoc(itemsRef, {
             text: p.name,
             category: guessCategory(p.name),
