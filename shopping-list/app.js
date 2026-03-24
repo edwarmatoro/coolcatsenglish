@@ -208,6 +208,22 @@ let knownProducts = new Map();
 let showOnlyPending = false;
 let lastDocs = [];
 
+// Collapsed categories state (persisted in sessionStorage)
+const collapsedCategories = new Set(
+    JSON.parse(sessionStorage.getItem("collapsedCats") || "[]")
+);
+
+function toggleCollapse(cat, section) {
+    if (collapsedCategories.has(cat)) {
+        collapsedCategories.delete(cat);
+        section.classList.remove("collapsed");
+    } else {
+        collapsedCategories.add(cat);
+        section.classList.add("collapsed");
+    }
+    sessionStorage.setItem("collapsedCats", JSON.stringify([...collapsedCategories]));
+}
+
 // Sync dot
 const syncDot = document.createElement("div");
 syncDot.className = "sync-dot";
@@ -547,10 +563,17 @@ function renderList(docs) {
             const heading = document.createElement("h3");
             heading.className = "category-heading";
             heading.textContent = cat;
+            heading.addEventListener("click", () => toggleCollapse(cat, section));
             section.appendChild(heading);
             const ul = document.createElement("ul");
             ul.className = "category-items";
             section.appendChild(ul);
+
+            // Restore collapsed state
+            if (collapsedCategories.has(cat)) {
+                section.classList.add("collapsed");
+            }
+
             // Insert in correct category order
             const catIndex = CATEGORIES.indexOf(cat);
             let inserted = false;

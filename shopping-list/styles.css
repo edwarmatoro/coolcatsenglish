@@ -308,6 +308,30 @@ body {
     border-left: 3px solid var(--primary);
     background: rgba(8, 145, 178, 0.05);
     border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: var(--transition);
+}
+
+.category-heading:hover {
+    background: rgba(8, 145, 178, 0.1);
+}
+
+.category-heading::after {
+    content: "▾";
+    font-size: 0.7rem;
+    transition: transform 0.2s ease;
+}
+
+.category-group.collapsed .category-heading::after {
+    transform: rotate(-90deg);
+}
+
+.category-group.collapsed .category-items {
+    display: none;
 }
 
 .category-items {
