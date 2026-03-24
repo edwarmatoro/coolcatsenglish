@@ -679,6 +679,59 @@ body {
     color: var(--danger);
 }
 
+/* ── Suggestions dropdown ── */
+.input-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 140px;
+}
+
+.input-wrapper input {
+    width: 100%;
+}
+
+.suggestions-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: var(--surface);
+    border: 2px solid var(--primary);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.suggestion-item {
+    padding: 0.65rem 1rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: var(--text);
+    transition: background 0.15s;
+    border-bottom: 1px solid var(--border);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+    background: rgba(8, 145, 178, 0.1);
+}
+
+.suggestion-item strong {
+    color: var(--primary);
+    font-weight: 700;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1024px) {
     .shopping-list {

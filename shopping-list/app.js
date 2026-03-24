@@ -195,6 +195,10 @@ const itemCount       = document.getElementById("itemCount");
 const clearChecked    = document.getElementById("clearChecked");
 const clearAll        = document.getElementById("clearAll");
 const autoCatHint     = document.getElementById("autoCatHint");
+const suggestions     = document.getElementById("suggestions");
+
+// Known products (populated from Firestore)
+let knownProducts = new Set();
 
 // Sync dot
 const syncDot = document.createElement("div");
@@ -323,6 +327,13 @@ function startListening() {
 function renderList(docs) {
     shoppingList.querySelectorAll(".category-group, .list-item").forEach(el => el.remove());
 
+    // Update known products for suggestions
+    knownProducts.clear();
+    docs.forEach(d => {
+        const t = (d.data().text || "").trim();
+        if (t) knownProducts.add(t);
+    });
+
     if (docs.length === 0) {
         emptyState.style.display = "block";
         itemCount.textContent = "";
@@ -437,6 +448,105 @@ itemInput.addEventListener("input", () => {
     const cat = guessCategory(text);
     categorySelect.value = cat;
     autoCatHint.textContent = cat !== "Otros" ? "→ " + cat : "";
+
+    // Show suggestions
+    showSuggestions(text);
+});
+
+// ──────────────────────────────────────────────
+// Suggestions while typing
+// ──────────────────────────────────────────────
+function showSuggestions(text) {
+    suggestions.innerHTML = "";
+    if (text.length < 2) { suggestions.style.display = "none"; return; }
+
+    const lower = text.toLowerCase();
+    const matches = [...knownProducts]
+        .filter(p => p.toLowerCase().includes(lower))
+        .sort((a, b) => {
+            // Prioritize products that START with the typed text
+            const aStarts = a.toLowerCase().startsWith(lower) ? 0 : 1;
+            const bStarts = b.toLowerCase().startsWith(lower) ? 0 : 1;
+            if (aStarts !== bStarts) return aStarts - bStarts;
+            return a.localeCompare(b, "es");
+        })
+        .slice(0, 8);
+
+    if (matches.length === 0 || (matches.length === 1 && matches[0].toLowerCase() === lower)) {
+        suggestions.style.display = "none";
+        return;
+    }
+
+    matches.forEach(name => {
+        const li = document.createElement("li");
+        li.className = "suggestion-item";
+
+        // Highlight matched portion
+        const idx = name.toLowerCase().indexOf(lower);
+        if (idx >= 0) {
+            li.appendChild(document.createTextNode(name.slice(0, idx)));
+            const strong = document.createElement("strong");
+            strong.textContent = name.slice(idx, idx + text.length);
+            li.appendChild(strong);
+            li.appendChild(document.createTextNode(name.slice(idx + text.length)));
+        } else {
+            li.textContent = name;
+        }
+
+        li.addEventListener("mousedown", (e) => {
+            e.preventDefault(); // prevent blur before click
+            selectSuggestion(name);
+        });
+        suggestions.appendChild(li);
+    });
+
+    suggestions.style.display = "block";
+}
+
+function selectSuggestion(name) {
+    itemInput.value = name;
+    suggestions.style.display = "none";
+    suggestions.innerHTML = "";
+    // Trigger auto-categorize
+    userManuallySelectedCategory = false;
+    const cat = guessCategory(name);
+    categorySelect.value = cat;
+    autoCatHint.textContent = cat !== "Otros" ? "→ " + cat : "";
+    itemInput.focus();
+}
+
+// Hide suggestions on blur / Escape
+itemInput.addEventListener("blur", () => {
+    // Small delay so mousedown on suggestion fires first
+    setTimeout(() => { suggestions.style.display = "none"; }, 150);
+});
+
+itemInput.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        suggestions.style.display = "none";
+    }
+    // Keyboard navigation
+    const items = suggestions.querySelectorAll(".suggestion-item");
+    if (items.length === 0) return;
+    const active = suggestions.querySelector(".suggestion-item.active");
+    let idx = [...items].indexOf(active);
+
+    if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (active) active.classList.remove("active");
+        idx = (idx + 1) % items.length;
+        items[idx].classList.add("active");
+        items[idx].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (active) active.classList.remove("active");
+        idx = idx <= 0 ? items.length - 1 : idx - 1;
+        items[idx].classList.add("active");
+        items[idx].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter" && active) {
+        e.preventDefault();
+        selectSuggestion(active.textContent);
+    }
 });
 
 // ──────────────────────────────────────────────
@@ -446,6 +556,7 @@ addForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = itemInput.value.trim();
     if (!text) return;
+    suggestions.style.display = "none";
     // Use auto-detected category if user didn't manually change it
     const category = userManuallySelectedCategory ? categorySelect.value : guessCategory(text);
     categorySelect.value = category;

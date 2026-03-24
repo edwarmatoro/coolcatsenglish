@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="/images/favicon.png">
     <link rel="apple-touch-icon" href="/images/favicon.png">
-    <link rel="stylesheet" href="styles.css?v=12">
+    <link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
 
@@ -40,13 +40,16 @@
 
         <main>
             <form class="add-form" id="addForm">
-                <input
-                    type="text"
-                    id="itemInput"
-                    placeholder="Añadir producto..."
-                    autocomplete="off"
-                    required
-                />
+                <div class="input-wrapper">
+                    <input
+                        type="text"
+                        id="itemInput"
+                        placeholder="Añadir producto..."
+                        autocomplete="off"
+                        required
+                    />
+                    <ul id="suggestions" class="suggestions-list"></ul>
+                </div>
                 <select id="categorySelect">
                     <option value="Fruta y Verdura">&#129382; Fruta y Verdura</option>
                     <option value="Lácteos y Huevos">&#129371; Lácteos y Huevos</option>
@@ -104,6 +107,6 @@
     </div>
 
     <!-- Firebase SDK -->
-    <script type="module" src="app.js?v=20"></script>
+    <script type="module" src="app.js?v=21"></script>
 </body>
 </html>
