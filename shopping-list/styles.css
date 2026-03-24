@@ -82,25 +82,20 @@
 }
 
 /* ── Sign out button in header ── */
-.app-header {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    margin-bottom: 1.5rem;
-}
 
 .btn-lock {
-    position: absolute;
-    right: 0;
     background: none;
-    border: none;
-    font-size: 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
     cursor: pointer;
     opacity: 0.5;
     transition: var(--transition);
-    padding: 0.25rem;
-    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-lock:hover {
@@ -110,8 +105,6 @@
 
 /* ── Install PWA button ── */
 .btn-install {
-    position: absolute;
-    left: 0;
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
@@ -125,6 +118,7 @@
     border-radius: 8px;
     transition: var(--transition);
     animation: pulse 2s ease-in-out 3;
+    flex-shrink: 0;
 }
 
 .btn-install:hover {
@@ -158,6 +152,22 @@
     --radius:     12px;
     --shadow:     0 2px 8px rgba(0,0,0,0.08);
     --transition: all 0.2s ease;
+    --danger-bg:  #fee2e2;
+}
+
+/* ── Dark theme ── */
+[data-theme="dark"] {
+    --bg:         #0f172a;
+    --surface:    #1e293b;
+    --text:       #f1f5f9;
+    --text-light: #94a3b8;
+    --border:     #334155;
+    --shadow:     0 2px 8px rgba(0,0,0,0.3);
+    --primary:    #22d3ee;
+    --primary-dk: #06b6d4;
+    --success:    #34d399;
+    --danger:     #f87171;
+    --danger-bg:  rgba(248, 113, 113, 0.15);
 }
 
 /* ── Body ── */
@@ -180,14 +190,45 @@ body {
 
 /* ── Header ── */
 .app-header {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 1.5rem;
+    gap: 0.5rem;
 }
 
 .app-header h1 {
     font-size: 2rem;
     font-weight: 700;
     color: var(--primary);
+    flex: 1;
+    text-align: center;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+/* ── Theme toggle ── */
+.btn-theme {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-theme:hover {
+    border-color: var(--primary);
+    background: rgba(8, 145, 178, 0.08);
 }
 
 /* ── Add form ── */
@@ -313,7 +354,7 @@ body {
 }
 
 .btn-clear:hover {
-    background: #fee2e2;
+    background: var(--danger-bg);
 }
 
 .btn-clear-all {
@@ -478,7 +519,7 @@ body {
 
 .btn-delete:hover {
     color: var(--danger);
-    background: #fee2e2;
+    background: var(--danger-bg);
 }
 
 /* ── Sync indicator ── */

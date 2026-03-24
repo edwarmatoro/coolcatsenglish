@@ -216,6 +216,36 @@ document.body.appendChild(syncDot);
 let unsubscribe = null;
 
 // ──────────────────────────────────────────────
+// Dark mode toggle
+// ──────────────────────────────────────────────
+const themeToggle = document.getElementById("themeToggle");
+const savedTheme = localStorage.getItem("theme");
+
+// Apply saved theme or respect system preference
+if (savedTheme) {
+    document.documentElement.setAttribute("data-theme", savedTheme);
+} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    document.documentElement.setAttribute("data-theme", "dark");
+}
+updateThemeIcon();
+
+themeToggle.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+    updateThemeIcon();
+    // Update meta theme-color for mobile browser bar
+    document.querySelector('meta[name="theme-color"]').content = next === "dark" ? "#0f172a" : "#0891b2";
+});
+
+function updateThemeIcon() {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    themeToggle.textContent = isDark ? "☀️" : "🌙";
+    themeToggle.title = isDark ? "Modo claro" : "Modo oscuro";
+}
+
+// ──────────────────────────────────────────────
 // Register Service Worker (PWA)
 // ──────────────────────────────────────────────
 if ("serviceWorker" in navigator) {
