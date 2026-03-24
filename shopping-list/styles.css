@@ -30,7 +30,6 @@
 
 .pin-box h2 {
     font-size: 1.5rem;
-    font-weight: 700;
     color: var(--primary);
 }
 
@@ -584,21 +583,27 @@ body {
     transform: translateY(-1px);
 }
 
-.frequent-chip.already-in-list {
-    opacity: 0.45;
+.frequent-chip:disabled {
+    opacity: 0.4;
     cursor: default;
-    text-decoration: line-through;
-}
-
-.frequent-chip.already-in-list:hover {
     transform: none;
-    border-color: var(--border);
-    background: var(--bg);
 }
 
 .frequent-chip.just-added {
     background: rgba(22, 163, 74, 0.15);
     border-color: var(--success);
+}
+
+.frequent-chip-all {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    font-weight: 700;
+}
+
+.frequent-chip-all:hover {
+    background: var(--primary-dk);
+    border-color: var(--primary-dk);
 }
 
 .frequent-count {

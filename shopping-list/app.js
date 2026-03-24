@@ -344,7 +344,7 @@ filterPending.addEventListener("click", () => {
 });
 
 // ──────────────────────────────────────────────
-// Frequent products panel
+// "Repetir" panel — products bought before but not pending now
 // ──────────────────────────────────────────────
 showFrequentBtn.addEventListener("click", () => {
     const isOpen = frequentPanel.style.display !== "none";
@@ -353,65 +353,83 @@ showFrequentBtn.addEventListener("click", () => {
         showFrequentBtn.classList.remove("active");
         return;
     }
-    renderFrequentChips();
+    renderRepeatChips();
     frequentPanel.style.display = "block";
     showFrequentBtn.classList.add("active");
 });
 
-function renderFrequentChips() {
+function renderRepeatChips() {
     frequentChips.innerHTML = "";
 
-    // Count purchases per product name (from all docs)
-    const purchaseCounts = [];
-    lastDocs.forEach(d => {
-        const data = d.data();
-        const count = (data.purchaseHistory && data.purchaseHistory.length) || 0;
-        if (count > 0) {
-            purchaseCounts.push({ text: data.text, count, id: d.id, checked: !!data.checked });
-        }
-    });
-
-    // Sort by purchase count descending, take top 15
-    purchaseCounts.sort((a, b) => b.count - a.count);
-    const top = purchaseCounts.slice(0, 15);
-
-    if (top.length === 0) {
-        frequentChips.innerHTML = '<span class="frequent-empty">Aún no hay historial de compras</span>';
-        return;
-    }
-
-    // Products currently in the list (not checked) - already pending
+    // Products currently pending (unchecked) — we don't suggest these
     const pendingNames = new Set(
         lastDocs.filter(d => !d.data().checked).map(d => d.data().text.toLowerCase())
     );
 
-    top.forEach(item => {
+    // Gather checked products (already bought) that are NOT pending
+    // These are candidates for "buy again"
+    const candidates = [];
+    lastDocs.forEach(d => {
+        const data = d.data();
+        const name = (data.text || "").trim();
+        const lower = name.toLowerCase();
+        if (!name) return;
+        if (pendingNames.has(lower)) return;           // already pending, skip
+        if (!data.checked) return;                      // unchecked but somehow not pending? skip
+        const count = (data.purchaseHistory && data.purchaseHistory.length) || 0;
+        candidates.push({ text: name, count, id: d.id });
+    });
+
+    // Sort: most purchased first, then alphabetical
+    candidates.sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.text.localeCompare(b.text, "es");
+    });
+
+    if (candidates.length === 0) {
+        frequentChips.innerHTML = '<span class="frequent-empty">No hay productos comprados para repetir 👍</span>';
+        return;
+    }
+
+    // "Add all" button
+    const addAllBtn = document.createElement("button");
+    addAllBtn.className = "frequent-chip frequent-chip-all";
+    addAllBtn.textContent = "➕ Añadir todos";
+    addAllBtn.addEventListener("click", async () => {
+        addAllBtn.disabled = true;
+        addAllBtn.textContent = "Añadiendo...";
+        for (const item of candidates) {
+            // Uncheck them so they become pending again
+            await updateDoc(doc(db, "items", item.id), { checked: false });
+        }
+        frequentPanel.style.display = "none";
+        showFrequentBtn.classList.remove("active");
+    });
+    frequentChips.appendChild(addAllBtn);
+
+    candidates.forEach(item => {
         const chip = document.createElement("button");
         chip.className = "frequent-chip";
-        const isPending = pendingNames.has(item.text.toLowerCase());
-        if (isPending) chip.classList.add("already-in-list");
-
-        chip.innerHTML = `${item.text} <span class="frequent-count">×${item.count}</span>`;
-        chip.title = isPending ? "Ya está en la lista" : `Añadir "${item.text}"`;
+        if (item.count > 1) {
+            chip.innerHTML = `${item.text} <span class="frequent-count">×${item.count}</span>`;
+        } else {
+            chip.textContent = item.text;
+        }
+        chip.title = `Volver a poner "${item.text}" como pendiente`;
 
         chip.addEventListener("click", async () => {
-            if (isPending) return; // already in list, unchecked
-
-            const existing = knownProducts.get(item.text.toLowerCase());
-            if (existing && existing.checked) {
-                // Re-purchase: mark checked again (adds date)
-                await toggleItem(existing.id, true);
-                chip.classList.add("just-added");
-                setTimeout(() => chip.classList.remove("just-added"), 600);
-            } else if (!existing) {
-                // Deleted product, re-add
-                const category = guessCategory(item.text);
-                await addDoc(itemsRef, { text: item.text, category, checked: false, createdAt: serverTimestamp() });
-                chip.classList.add("just-added");
-                setTimeout(() => chip.classList.remove("just-added"), 600);
-            }
-            // Re-render chips to update state
-            setTimeout(() => renderFrequentChips(), 800);
+            // Uncheck → becomes pending again
+            await updateDoc(doc(db, "items", item.id), { checked: false });
+            chip.classList.add("just-added");
+            chip.disabled = true;
+            setTimeout(() => {
+                chip.remove();
+                // If no more chips, close panel
+                if (frequentChips.querySelectorAll(".frequent-chip:not(.frequent-chip-all)").length === 0) {
+                    frequentPanel.style.display = "none";
+                    showFrequentBtn.classList.remove("active");
+                }
+            }, 500);
         });
 
         frequentChips.appendChild(chip);
