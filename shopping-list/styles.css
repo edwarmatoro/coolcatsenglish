@@ -355,7 +355,8 @@ body {
 /* ── Controls bar ── */
 .list-controls {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.4rem;
     align-items: center;
     margin-bottom: 0.75rem;
     min-height: 28px;
@@ -364,27 +365,6 @@ body {
 .item-count {
     font-size: 0.875rem;
     color: var(--text-light);
-}
-
-.btn-clear {
-    font-size: 0.8rem;
-    color: var(--danger);
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    transition: var(--transition);
-}
-
-.btn-clear:hover {
-    background: var(--danger-bg);
-}
-
-.btn-clear-all {
-    opacity: 0.6;
-    font-size: 0.75rem;
 }
 
 /* ── Shopping list ── */
