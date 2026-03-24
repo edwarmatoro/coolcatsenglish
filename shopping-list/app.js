@@ -204,6 +204,13 @@ document.body.appendChild(syncDot);
 let unsubscribe = null;
 
 // ──────────────────────────────────────────────
+// Register Service Worker (PWA)
+// ──────────────────────────────────────────────
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+// ──────────────────────────────────────────────
 // Auth state
 // ──────────────────────────────────────────────
 onAuthStateChanged(auth, (user) => {
@@ -324,7 +331,7 @@ function renderList(docs) {
             .sort((a, b) => (a.data().text || "").localeCompare(b.data().text || "", "es"))
             .forEach(docSnap => {
             const data = docSnap.data();
-            ul.appendChild(createItemElement(docSnap.id, data.text, data.checked, data.purchaseHistory));
+            ul.appendChild(createItemElement(docSnap.id, data.text, data.checked, data.purchaseHistory, data.note));
         });
 
         section.appendChild(ul);
