@@ -194,11 +194,16 @@ const emptyState      = document.getElementById("emptyState");
 const itemCount       = document.getElementById("itemCount");
 const clearChecked    = document.getElementById("clearChecked");
 const clearAll        = document.getElementById("clearAll");
+const filterPending   = document.getElementById("filterPending");
 const autoCatHint     = document.getElementById("autoCatHint");
 const suggestions     = document.getElementById("suggestions");
 
 // Known products map: lowercase name → { id, text, checked }
 let knownProducts = new Map();
+
+// Filter state
+let showOnlyPending = false;
+let lastDocs = [];
 
 // Sync dot
 const syncDot = document.createElement("div");
@@ -316,10 +321,24 @@ function startListening() {
     if (unsubscribe) return;
     const q = query(itemsRef, orderBy("createdAt", "asc"));
     unsubscribe = onSnapshot(q,
-        (snapshot) => { syncDot.classList.remove("offline"); renderList(snapshot.docs); },
+        (snapshot) => {
+            syncDot.classList.remove("offline");
+            lastDocs = snapshot.docs;
+            renderList(lastDocs);
+        },
         () => syncDot.classList.add("offline")
     );
 }
+
+// ──────────────────────────────────────────────
+// Filter toggle
+// ──────────────────────────────────────────────
+filterPending.addEventListener("click", () => {
+    showOnlyPending = !showOnlyPending;
+    filterPending.classList.toggle("active", showOnlyPending);
+    filterPending.innerHTML = showOnlyPending ? "&#128064; Ver todo" : "&#128065; Por comprar";
+    renderList(lastDocs);
+});
 
 // ──────────────────────────────────────────────
 // Render list grouped by category
@@ -327,7 +346,7 @@ function startListening() {
 function renderList(docs) {
     shoppingList.querySelectorAll(".category-group, .list-item").forEach(el => el.remove());
 
-    // Update known products for suggestions
+    // Update known products for suggestions (always from ALL docs)
     knownProducts.clear();
     docs.forEach(d => {
         const t = (d.data().text || "").trim();
@@ -336,20 +355,32 @@ function renderList(docs) {
 
     if (docs.length === 0) {
         emptyState.style.display = "block";
+        emptyState.textContent = "La lista está vacía. ¡Añade algo! 🧺";
         itemCount.textContent = "";
         return;
     }
 
-    emptyState.style.display = "none";
     const total   = docs.length;
     const checked = docs.filter(d => d.data().checked).length;
+    const pending = total - checked;
     itemCount.textContent = checked + "/" + total + " marcados";
+
+    // Apply filter
+    const visibleDocs = showOnlyPending ? docs.filter(d => !d.data().checked) : docs;
+
+    if (visibleDocs.length === 0) {
+        emptyState.style.display = "block";
+        emptyState.textContent = "✅ ¡Todo comprado!";
+        return;
+    }
+
+    emptyState.style.display = "none";
 
     // Group docs by category in CATEGORIES order
     const grouped = {};
     CATEGORIES.forEach(cat => { grouped[cat] = []; });
 
-    docs.forEach(docSnap => {
+    visibleDocs.forEach(docSnap => {
         const cat = docSnap.data().category || "Otros";
         if (!grouped[cat]) grouped[cat] = [];
         grouped[cat].push(docSnap);

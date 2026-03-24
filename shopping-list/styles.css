@@ -499,6 +499,30 @@ body {
     box-shadow: 0 0 6px var(--danger);
 }
 
+/* ── Filter button ── */
+.btn-filter {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    background: none;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.btn-filter:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.btn-filter.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
 /* ── Scan ticket button ── */
 .btn-scan {
     font-size: 0.8rem;
