@@ -629,7 +629,10 @@ function renderList(docs) {
     renderedItems.forEach((_, id) => {
         if (!visibleIds.has(id)) {
             const el = shoppingList.querySelector(`.list-item[data-id="${id}"]`);
-            if (el) el.remove();
+            if (el) {
+                const wrapper = el.closest(".swipe-container") || el;
+                wrapper.remove();
+            }
             renderedItems.delete(id);
         }
     });
@@ -703,18 +706,21 @@ function renderList(docs) {
             if (changed) {
                 // Remove old element if exists
                 const oldEl = ul.querySelector(`.list-item[data-id="${id}"]`);
-                if (oldEl) oldEl.remove();
+                if (oldEl) {
+                    const oldWrapper = oldEl.closest(".swipe-container") || oldEl;
+                    oldWrapper.remove();
+                }
 
-                // Create new element
+                // Create new element (returns swipe-container wrapping a .list-item)
                 const newEl = createItemElement(id, data.text, data.checked, data.purchaseHistory, data.note);
 
-                // Insert in sorted position
-                const existingItems = [...ul.querySelectorAll(".list-item")];
+                // Insert in sorted position (compare against .list-item labels inside containers)
+                const existingContainers = [...ul.querySelectorAll(".swipe-container")];
                 let insertedItem = false;
-                for (const item of existingItems) {
-                    const itemText = item.querySelector(".item-label")?.textContent || "";
+                for (const container of existingContainers) {
+                    const itemText = container.querySelector(".item-label")?.textContent || "";
                     if (data.text.localeCompare(itemText, "es") < 0) {
-                        ul.insertBefore(newEl, item);
+                        ul.insertBefore(newEl, container);
                         insertedItem = true;
                         break;
                     }
@@ -722,7 +728,10 @@ function renderList(docs) {
                 if (!insertedItem) ul.appendChild(newEl);
 
                 // Don't animate on updates, only on new items
-                if (prev) newEl.style.animation = "none";
+                if (prev) {
+                    const innerLi = newEl.querySelector(".list-item");
+                    if (innerLi) innerLi.style.animation = "none";
+                }
 
                 renderedItems.set(id, {
                     checked: !!data.checked,
@@ -737,7 +746,8 @@ function renderList(docs) {
         ul.querySelectorAll(".list-item").forEach(el => {
             const id = el.dataset.id;
             if (!sortedDocs.some(d => d.id === id)) {
-                el.remove();
+                const wrapper = el.closest(".swipe-container") || el;
+                wrapper.remove();
                 renderedItems.delete(id);
             }
         });
@@ -883,41 +893,95 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
     deleteBtn.setAttribute("aria-label", "Eliminar");
     deleteBtn.addEventListener("click", () => removeItem(id));
 
+    // Swipe action backgrounds
+    const swipeContainer = document.createElement("div");
+    swipeContainer.className = "swipe-container";
+
+    const swipeBgLeft = document.createElement("div");
+    swipeBgLeft.className = "swipe-bg swipe-bg-left";
+    swipeBgLeft.innerHTML = "🗑️ Eliminar";
+
+    const swipeBgRight = document.createElement("div");
+    swipeBgRight.className = "swipe-bg swipe-bg-right";
+    swipeBgRight.innerHTML = checked ? "🔄 Pendiente" : "✅ Comprado";
+
     li.append(checkbox, textWrapper, deleteBtn);
+    swipeContainer.append(swipeBgLeft, swipeBgRight, li);
 
     // Swipe gestures (mobile)
     let touchStartX = 0;
     let touchStartY = 0;
     let swiping = false;
+    let directionLocked = null; // "h" = horizontal, "v" = vertical
+    let hasVibratedThreshold = false;
 
     li.addEventListener("touchstart", (e) => {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         swiping = false;
+        directionLocked = null;
+        hasVibratedThreshold = false;
         li.style.transition = "none";
+        swipeBgLeft.classList.remove("ready");
+        swipeBgRight.classList.remove("ready");
     }, { passive: true });
 
     li.addEventListener("touchmove", (e) => {
         const dx = e.touches[0].clientX - touchStartX;
         const dy = e.touches[0].clientY - touchStartY;
-        // Only swipe if horizontal movement > vertical
-        if (Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-            swiping = true;
-            const clamped = Math.max(-100, Math.min(100, dx));
-            li.style.transform = `translateX(${clamped}px)`;
-            li.style.opacity = 1 - Math.abs(clamped) / 150;
+
+        // Lock direction once finger has moved enough (15px threshold)
+        if (!directionLocked && (Math.abs(dx) > 15 || Math.abs(dy) > 15)) {
+            directionLocked = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         }
+
+        // If scrolling vertically, do nothing
+        if (directionLocked !== "h") return;
+
+        // Horizontal swipe confirmed
+        swiping = true;
+        const clamped = Math.max(-120, Math.min(120, dx));
+        li.style.transform = `translateX(${clamped}px)`;
+
+        // Show relevant background
+        if (dx < 0) {
+            swipeBgLeft.style.opacity = Math.min(1, Math.abs(dx) / 60);
+            swipeBgRight.style.opacity = 0;
+            swipeBgLeft.classList.toggle("ready", dx < -60);
+        } else {
+            swipeBgRight.style.opacity = Math.min(1, dx / 60);
+            swipeBgLeft.style.opacity = 0;
+            swipeBgRight.classList.toggle("ready", dx > 60);
+        }
+
+        // Haptic feedback when crossing threshold
+        if (Math.abs(dx) > 60 && !hasVibratedThreshold) {
+            hasVibratedThreshold = true;
+            if (navigator.vibrate) navigator.vibrate(15);
+        }
+        if (Math.abs(dx) <= 60) hasVibratedThreshold = false;
     }, { passive: true });
 
     li.addEventListener("touchend", () => {
-        li.style.transition = "transform 0.2s ease, opacity 0.2s ease";
+        li.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+
+        if (directionLocked !== "h") {
+            // Was a vertical scroll — reset and bail
+            li.style.transform = "";
+            swipeBgLeft.style.opacity = 0;
+            swipeBgRight.style.opacity = 0;
+            swiping = false;
+            directionLocked = null;
+            return;
+        }
+
         const currentX = parseFloat(li.style.transform.replace(/[^-\d.]/g, "")) || 0;
 
         if (currentX < -60) {
             // Swipe left → delete
             li.style.transform = "translateX(-100%)";
             li.style.opacity = "0";
-            setTimeout(() => removeItem(id), 200);
+            setTimeout(() => removeItem(id), 250);
         } else if (currentX > 60) {
             // Swipe right → toggle checked
             li.style.transform = "translateX(100%)";
@@ -925,15 +989,22 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
             setTimeout(() => {
                 checkbox.checked = !checked;
                 toggleItem(id, !checked);
-            }, 200);
+            }, 250);
         } else {
+            // Snap back
             li.style.transform = "";
-            li.style.opacity = "";
+            setTimeout(() => {
+                swipeBgLeft.style.opacity = 0;
+                swipeBgRight.style.opacity = 0;
+            }, 150);
         }
+        swipeBgLeft.classList.remove("ready");
+        swipeBgRight.classList.remove("ready");
         swiping = false;
+        directionLocked = null;
     });
 
-    return li;
+    return swipeContainer;
 }
 
 // Save note to Firestore
