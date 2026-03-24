@@ -658,6 +658,8 @@ function resetScanUI() {
     scanResultsList.innerHTML = "";
     scanFileInput.value = "";
     detectedProducts = [];
+    scanAddAll.disabled = false;
+    scanAddAll.textContent = "✓ Añadir todos";
 }
 
 // Load Tesseract.js lazily
@@ -900,6 +902,14 @@ scanAddAll.addEventListener("click", async () => {
         ![...knownProducts].some(k => k.toLowerCase() === p.name.trim().toLowerCase())
     );
 
+    if (newOnly.length === 0) {
+        scanAddAll.textContent = "⚠️ Ya están todos en la lista";
+        setTimeout(() => closeScanModal(), 1500);
+        return;
+    }
+
+    const skipped = toAdd.length - newOnly.length;
+
     const promises = newOnly.map(p =>
         addDoc(itemsRef, {
             text: p.name,
@@ -910,5 +920,11 @@ scanAddAll.addEventListener("click", async () => {
     );
 
     await Promise.all(promises);
-    closeScanModal();
+
+    if (skipped > 0) {
+        scanAddAll.textContent = `✓ ${newOnly.length} añadidos, ${skipped} ya existían`;
+        setTimeout(() => closeScanModal(), 1500);
+    } else {
+        closeScanModal();
+    }
 });
