@@ -383,7 +383,7 @@ function renderList(docs) {
 // ──────────────────────────────────────────────
 // Create list item element
 // ──────────────────────────────────────────────
-function createItemElement(id, text, checked, purchaseHistory) {
+function createItemElement(id, text, checked, purchaseHistory, note) {
     const li = document.createElement("li");
     li.className  = "list-item" + (checked ? " checked" : "");
     li.dataset.id = id;
@@ -406,12 +406,73 @@ function createItemElement(id, text, checked, purchaseHistory) {
 
     textWrapper.appendChild(label);
 
+    // Note display + inline editor
+    const noteRow = document.createElement("div");
+    noteRow.className = "item-note-row";
+
+    const noteBtn = document.createElement("button");
+    noteBtn.className = "btn-note" + (note ? " has-note" : "");
+    noteBtn.textContent = "📝";
+    noteBtn.title = note ? "Editar nota" : "Añadir nota";
+
+    const noteDisplay = document.createElement("span");
+    noteDisplay.className = "item-note-text";
+    noteDisplay.textContent = note || "";
+    if (!note) noteDisplay.style.display = "none";
+
+    const noteInput = document.createElement("input");
+    noteInput.type = "text";
+    noteInput.className = "item-note-input";
+    noteInput.placeholder = "Ej: marca, tamaño, tipo...";
+    noteInput.value = note || "";
+    noteInput.style.display = "none";
+
+    noteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isEditing = noteInput.style.display !== "none";
+        if (isEditing) {
+            // Save and close
+            saveNote(id, noteInput.value.trim(), noteDisplay, noteBtn);
+            noteInput.style.display = "none";
+        } else {
+            // Open editor
+            noteDisplay.style.display = "none";
+            noteInput.style.display = "";
+            noteInput.focus();
+        }
+    });
+
+    noteInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            saveNote(id, noteInput.value.trim(), noteDisplay, noteBtn);
+            noteInput.style.display = "none";
+        }
+        if (e.key === "Escape") {
+            noteInput.value = note || "";
+            noteInput.style.display = "none";
+            if (note) noteDisplay.style.display = "";
+        }
+    });
+
+    noteInput.addEventListener("blur", () => {
+        // Small delay to allow button click to fire first
+        setTimeout(() => {
+            if (noteInput.style.display !== "none") {
+                saveNote(id, noteInput.value.trim(), noteDisplay, noteBtn);
+                noteInput.style.display = "none";
+            }
+        }, 150);
+    });
+
+    noteRow.append(noteBtn, noteDisplay, noteInput);
+    textWrapper.appendChild(noteRow);
+
     if (purchaseHistory && purchaseHistory.length > 0) {
         const dates = purchaseHistory.map(ts => {
             const d = ts.toDate ? ts.toDate() : new Date(ts);
             return d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
         });
-        // Eliminar fechas duplicadas (mismo día)
         const uniqueDates = [...new Set(dates)];
         const dateSpan = document.createElement("span");
         dateSpan.className = "item-checked-date";
@@ -427,6 +488,23 @@ function createItemElement(id, text, checked, purchaseHistory) {
 
     li.append(checkbox, textWrapper, deleteBtn);
     return li;
+}
+
+// Save note to Firestore
+async function saveNote(id, noteText, noteDisplay, noteBtn) {
+    if (noteText) {
+        noteDisplay.textContent = noteText;
+        noteDisplay.style.display = "";
+        noteBtn.classList.add("has-note");
+        noteBtn.title = "Editar nota";
+        await updateDoc(doc(db, "items", id), { note: noteText });
+    } else {
+        noteDisplay.textContent = "";
+        noteDisplay.style.display = "none";
+        noteBtn.classList.remove("has-note");
+        noteBtn.title = "Añadir nota";
+        await updateDoc(doc(db, "items", id), { note: deleteField() });
+    }
 }
 
 // ──────────────────────────────────────────────

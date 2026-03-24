@@ -408,6 +408,61 @@ body {
     opacity: 0.8;
 }
 
+/* ── Item note ── */
+.item-note-row {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 1.2rem;
+}
+
+.btn-note {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.35;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.list-item:hover .btn-note,
+.btn-note:focus {
+    opacity: 0.7;
+}
+
+.btn-note.has-note {
+    opacity: 0.8;
+}
+
+.item-note-text {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    font-style: italic;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+.item-note-input {
+    flex: 1;
+    font-size: 0.78rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    outline: none;
+    background: var(--surface);
+    color: var(--text);
+    font-style: italic;
+    min-width: 0;
+}
+
+.item-note-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.12);
+}
+
 /* ── Delete button ── */
 .btn-delete {
     background: none;
