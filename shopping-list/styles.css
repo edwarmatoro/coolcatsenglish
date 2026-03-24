@@ -339,6 +339,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    overflow: hidden;
 }
 
 /* ── Auto-category hint ── */
@@ -527,6 +528,20 @@ body {
     box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.12);
 }
 
+/* ── Edit name inline ── */
+.edit-name-input {
+    flex: 1;
+    font-size: 1rem;
+    padding: 0.2rem 0.4rem;
+    border: 2px solid var(--primary);
+    border-radius: 6px;
+    outline: none;
+    background: var(--surface);
+    color: var(--text);
+    min-width: 0;
+    width: 100%;
+}
+
 /* ── Delete button ── */
 .btn-delete {
     background: none;
@@ -585,6 +600,60 @@ body {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
+}
+
+/* ── "Estoy en el súper" button ── */
+.btn-in-store {
+    font-size: 0.8rem;
+    color: #059669;
+    background: none;
+    border: 1px solid #059669;
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.btn-in-store:hover {
+    background: #059669;
+    color: white;
+}
+
+.btn-in-store.active {
+    background: #059669;
+    color: white;
+    animation: pulse-store 2s ease-in-out infinite;
+}
+
+@keyframes pulse-store {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4); }
+    50%      { box-shadow: 0 0 0 6px rgba(5, 150, 105, 0); }
+}
+
+/* ── In-store banner ── */
+.in-store-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: white;
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    animation: slide-in-banner 0.3s ease-out;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
+@keyframes slide-in-banner {
+    from { transform: translateY(-10px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+[data-theme="dark"] .in-store-banner {
+    background: linear-gradient(135deg, #065f46 0%, #059669 100%);
 }
 
 /* ── Frequent products button ── */

@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="/images/favicon.png">
     <link rel="apple-touch-icon" href="/images/favicon.png">
-    <link rel="stylesheet" href="styles.css?v=20">
+    <link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
 
@@ -40,6 +40,8 @@
                 <button class="btn-lock" id="signOutBtn" title="Cerrar sesión">&#128682;</button>
             </div>
         </header>
+
+        <div class="in-store-banner" id="inStoreBanner" style="display:none;"></div>
 
         <main>
             <form class="add-form" id="addForm">
@@ -70,6 +72,7 @@
             <div class="list-controls">
                 <span id="itemCount" class="item-count"></span>
                 <button id="filterPending" class="btn-filter" title="Mostrar solo pendientes">&#128065; Por comprar</button>
+                <button id="inStoreBtn" class="btn-in-store" title="Avisar que estás comprando">&#128722; Estoy en el súper</button>
                 <button id="showFrequent" class="btn-frequent" title="Volver a poner productos comprados como pendientes">&#128260; Repetir</button>
                 <button id="scanTicket" class="btn-scan" title="Escanear ticket">&#128247; Escanear ticket</button>
                 <button id="clearChecked" class="btn-clear">Eliminar marcados</button>
@@ -118,6 +121,6 @@
     </div>
 
     <!-- Firebase SDK -->
-    <script type="module" src="app.js?v=34"></script>
+    <script type="module" src="app.js?v=35"></script>
 </body>
 </html>

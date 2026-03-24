@@ -18,6 +18,7 @@ import {
     getDocs,
     onSnapshot,
     doc,
+    setDoc,
     serverTimestamp,
     deleteField,
     arrayUnion,
@@ -176,6 +177,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
 const db          = getFirestore(firebaseApp);
 const itemsRef    = collection(db, "items");
+const statusDocRef = doc(db, "status", "shared");
 
 // ──────────────────────────────────────────────
 // DOM references
@@ -200,6 +202,8 @@ const frequentPanel   = document.getElementById("frequentPanel");
 const frequentChips   = document.getElementById("frequentChips");
 const autoCatHint     = document.getElementById("autoCatHint");
 const suggestions     = document.getElementById("suggestions");
+const inStoreBtn      = document.getElementById("inStoreBtn");
+const inStoreBanner   = document.getElementById("inStoreBanner");
 
 // Known products map: lowercase name → { id, text, checked }
 let knownProducts = new Map();
@@ -230,6 +234,90 @@ syncDot.className = "sync-dot";
 document.body.appendChild(syncDot);
 
 let unsubscribe = null;
+let unsubscribeStatus = null;
+let currentUser = null;   // set in onAuthStateChanged
+
+// ──────────────────────────────────────────────
+// "Estoy en el súper" — shared store status
+// ──────────────────────────────────────────────
+let _lastStatusData = {};
+let _statusTimerInterval = null;
+
+function startStatusListener() {
+    if (unsubscribeStatus) return;
+    unsubscribeStatus = onSnapshot(statusDocRef, (snap) => {
+        const data = snap.exists() ? snap.data() : {};
+        _lastStatusData = data;
+        updateInStoreBanner(data);
+        updateInStoreButton(data);
+
+        // Auto-expire after 2 hours
+        if (data.inStore && data.since && data.since.toDate) {
+            const elapsed = Date.now() - data.since.toDate().getTime();
+            if (elapsed > 2 * 60 * 60 * 1000) {
+                setDoc(statusDocRef, { inStore: false, uid: null, name: null, since: null });
+            }
+        }
+    });
+
+    // Refresh banner time every 60 s
+    _statusTimerInterval = setInterval(() => {
+        if (_lastStatusData.inStore) updateInStoreBanner(_lastStatusData);
+    }, 60000);
+}
+
+function stopStatusListener() {
+    if (unsubscribeStatus) { unsubscribeStatus(); unsubscribeStatus = null; }
+    if (_statusTimerInterval) { clearInterval(_statusTimerInterval); _statusTimerInterval = null; }
+}
+
+function updateInStoreBanner(data) {
+    if (!data.inStore || !data.uid) {
+        inStoreBanner.style.display = "none";
+        return;
+    }
+    // Only show banner if ANOTHER user is in the store
+    if (currentUser && data.uid === currentUser.uid) {
+        inStoreBanner.style.display = "none";
+        return;
+    }
+    const name = data.name || "Alguien";
+    let timeStr = "";
+    if (data.since && data.since.toDate) {
+        const diff = Math.round((Date.now() - data.since.toDate().getTime()) / 60000);
+        if (diff < 1) timeStr = " (ahora mismo)";
+        else if (diff === 1) timeStr = " (hace 1 min)";
+        else timeStr = ` (hace ${diff} min)`;
+    }
+    inStoreBanner.innerHTML = `🛒 <strong>${name}</strong> está en el súper${timeStr}`;
+    inStoreBanner.style.display = "flex";
+}
+
+function updateInStoreButton(data) {
+    if (!currentUser) return;
+    const iAmInStore = data.inStore && data.uid === currentUser.uid;
+    inStoreBtn.classList.toggle("active", iAmInStore);
+    inStoreBtn.innerHTML = iAmInStore ? "🛒 ¡Estoy comprando!" : "🛒 Estoy en el súper";
+}
+
+inStoreBtn.addEventListener("click", async () => {
+    if (!currentUser) return;
+    // Read current status from button state
+    const iAmInStore = inStoreBtn.classList.contains("active");
+    if (iAmInStore) {
+        // Turn off
+        await setDoc(statusDocRef, { inStore: false, uid: null, name: null, since: null });
+    } else {
+        // Turn on
+        const name = currentUser.displayName || currentUser.email.split("@")[0];
+        await setDoc(statusDocRef, {
+            inStore: true,
+            uid: currentUser.uid,
+            name: name,
+            since: serverTimestamp()
+        });
+    }
+});
 
 // ──────────────────────────────────────────────
 // Dark mode toggle
@@ -303,11 +391,14 @@ if (window.matchMedia("(display-mode: standalone)").matches) {
 // ──────────────────────────────────────────────
 onAuthStateChanged(auth, (user) => {
     if (user && ALLOWED_UIDS.includes(user.uid)) {
+        currentUser = user;
         authScreen.style.display = "none";
         appContent.style.display = "block";
         authError.textContent    = "";
         startListening();
+        startStatusListener();
     } else {
+        currentUser = null;
         appContent.style.display = "none";
         authScreen.style.display = "flex";
         if (user && !ALLOWED_UIDS.includes(user.uid)) {
@@ -315,6 +406,7 @@ onAuthStateChanged(auth, (user) => {
             signOut(auth);
         }
         if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+        stopStatusListener();
     }
 });
 
@@ -674,9 +766,42 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
     const label = document.createElement("span");
     label.className   = "item-label";
     label.textContent = text;
-    label.addEventListener("click", () => {
+
+    // Long-press to edit name
+    let longPressTimer = null;
+    let didLongPress = false;
+
+    const startLongPress = (e) => {
+        didLongPress = false;
+        longPressTimer = setTimeout(() => {
+            didLongPress = true;
+            e.preventDefault();
+            startEditName(id, text, label, textWrapper);
+        }, 500);
+    };
+
+    const cancelLongPress = () => {
+        clearTimeout(longPressTimer);
+    };
+
+    label.addEventListener("touchstart", startLongPress, { passive: false });
+    label.addEventListener("touchend", (e) => {
+        cancelLongPress();
+        if (didLongPress) { e.preventDefault(); return; }
         checkbox.checked = !checkbox.checked;
         toggleItem(id, checkbox.checked);
+    });
+    label.addEventListener("touchmove", cancelLongPress);
+
+    // Desktop: click to toggle, dblclick to edit
+    label.addEventListener("click", (e) => {
+        if (didLongPress) return;
+        checkbox.checked = !checkbox.checked;
+        toggleItem(id, checkbox.checked);
+    });
+    label.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        startEditName(id, text, label, textWrapper);
     });
 
     textWrapper.appendChild(label);
@@ -762,6 +887,55 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
     deleteBtn.addEventListener("click", () => removeItem(id));
 
     li.append(checkbox, textWrapper, deleteBtn);
+
+    // Swipe gestures (mobile)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let swiping = false;
+
+    li.addEventListener("touchstart", (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        swiping = false;
+        li.style.transition = "none";
+    }, { passive: true });
+
+    li.addEventListener("touchmove", (e) => {
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
+        // Only swipe if horizontal movement > vertical
+        if (Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            swiping = true;
+            const clamped = Math.max(-100, Math.min(100, dx));
+            li.style.transform = `translateX(${clamped}px)`;
+            li.style.opacity = 1 - Math.abs(clamped) / 150;
+        }
+    }, { passive: true });
+
+    li.addEventListener("touchend", () => {
+        li.style.transition = "transform 0.2s ease, opacity 0.2s ease";
+        const currentX = parseFloat(li.style.transform.replace(/[^-\d.]/g, "")) || 0;
+
+        if (currentX < -60) {
+            // Swipe left → delete
+            li.style.transform = "translateX(-100%)";
+            li.style.opacity = "0";
+            setTimeout(() => removeItem(id), 200);
+        } else if (currentX > 60) {
+            // Swipe right → toggle checked
+            li.style.transform = "translateX(100%)";
+            li.style.opacity = "0";
+            setTimeout(() => {
+                checkbox.checked = !checked;
+                toggleItem(id, !checked);
+            }, 200);
+        } else {
+            li.style.transform = "";
+            li.style.opacity = "";
+        }
+        swiping = false;
+    });
+
     return li;
 }
 
@@ -780,6 +954,41 @@ async function saveNote(id, noteText, noteDisplay, noteBtn) {
         noteBtn.title = "Añadir nota";
         await updateDoc(doc(db, "items", id), { note: deleteField() });
     }
+}
+
+// Edit product name inline
+function startEditName(id, currentText, label, textWrapper) {
+    // Avoid duplicate editors
+    if (textWrapper.querySelector(".edit-name-input")) return;
+
+    label.style.display = "none";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "edit-name-input";
+    input.value = currentText;
+    textWrapper.insertBefore(input, textWrapper.firstChild);
+    input.focus();
+    input.select();
+
+    const save = async () => {
+        const newText = input.value.trim();
+        input.remove();
+        label.style.display = "";
+        if (newText && newText !== currentText) {
+            label.textContent = newText;
+            const newCat = guessCategory(newText);
+            await updateDoc(doc(db, "items", id), { text: newText, category: newCat });
+        }
+    };
+
+    input.addEventListener("blur", () => setTimeout(save, 100));
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+        if (e.key === "Escape") {
+            input.value = currentText;
+            input.blur();
+        }
+    });
 }
 
 // ──────────────────────────────────────────────
