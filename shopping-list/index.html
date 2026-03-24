@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista de la Compra</title>
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 
@@ -54,6 +54,7 @@
 
             <div class="list-controls">
                 <span id="itemCount" class="item-count"></span>
+                <button id="scanTicket" class="btn-scan" title="Escanear ticket">&#128247; Escanear ticket</button>
                 <button id="clearChecked" class="btn-clear">Eliminar marcados</button>
                 <button id="clearAll" class="btn-clear btn-clear-all">Vaciar lista</button>
             </div>
@@ -64,7 +65,36 @@
         </main>
     </div>
 
+    <!-- Scan modal -->
+    <div class="scan-modal" id="scanModal" style="display:none;">
+        <div class="scan-box">
+            <div class="scan-header">
+                <h3>&#128247; Escanear ticket</h3>
+                <button id="scanClose" class="scan-close">&times;</button>
+            </div>
+            <div class="scan-body">
+                <label class="scan-upload-label" id="scanUploadLabel">
+                    &#128206; Sube foto del ticket
+                    <input type="file" id="scanFileInput" accept="image/*" capture="environment" hidden>
+                </label>
+                <img id="scanPreview" class="scan-preview" style="display:none;" alt="Preview ticket">
+                <div id="scanProgress" class="scan-progress" style="display:none;">
+                    <div class="scan-progress-bar" id="scanProgressBar"></div>
+                    <span id="scanProgressText">Procesando...</span>
+                </div>
+                <div id="scanResults" class="scan-results" style="display:none;">
+                    <p class="scan-results-title">Productos detectados:</p>
+                    <ul id="scanResultsList" class="scan-results-list"></ul>
+                    <div class="scan-results-actions">
+                        <button id="scanAddAll" class="btn-scan-add">&#10003; Añadir todos</button>
+                        <button id="scanCancel" class="btn-scan-cancel">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
-    <script type="module" src="app.js?v=13"></script>
+    <script type="module" src="app.js?v=14"></script>
 </body>
 </html>

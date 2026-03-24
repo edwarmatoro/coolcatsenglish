@@ -314,3 +314,223 @@ clearAll.addEventListener("click", async () => {
     const snapshot = await getDocs(query(itemsRef));
     await Promise.all(snapshot.docs.map(d => deleteDoc(d.ref)));
 });
+
+// ──────────────────────────────────────────────
+// Ticket scanner (Tesseract.js OCR)
+// ──────────────────────────────────────────────
+const scanTicketBtn  = document.getElementById("scanTicket");
+const scanModal      = document.getElementById("scanModal");
+const scanClose      = document.getElementById("scanClose");
+const scanFileInput  = document.getElementById("scanFileInput");
+const scanUploadLabel = document.getElementById("scanUploadLabel");
+const scanPreview    = document.getElementById("scanPreview");
+const scanProgress   = document.getElementById("scanProgress");
+const scanProgressBar = document.getElementById("scanProgressBar");
+const scanProgressText = document.getElementById("scanProgressText");
+const scanResults    = document.getElementById("scanResults");
+const scanResultsList = document.getElementById("scanResultsList");
+const scanAddAll     = document.getElementById("scanAddAll");
+const scanCancel     = document.getElementById("scanCancel");
+
+let tesseractLoaded = false;
+let detectedProducts = [];
+
+scanTicketBtn.addEventListener("click", () => {
+    scanModal.style.display = "flex";
+    resetScanUI();
+});
+
+scanClose.addEventListener("click", closeScanModal);
+scanCancel.addEventListener("click", closeScanModal);
+scanModal.addEventListener("click", (e) => {
+    if (e.target === scanModal) closeScanModal();
+});
+
+function closeScanModal() {
+    scanModal.style.display = "none";
+    resetScanUI();
+}
+
+function resetScanUI() {
+    scanPreview.style.display = "none";
+    scanProgress.style.display = "none";
+    scanResults.style.display = "none";
+    scanUploadLabel.style.display = "flex";
+    scanResultsList.innerHTML = "";
+    scanFileInput.value = "";
+    detectedProducts = [];
+}
+
+// Load Tesseract.js lazily
+async function loadTesseract() {
+    if (tesseractLoaded) return;
+    return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+        script.onload = () => { tesseractLoaded = true; resolve(); };
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+scanFileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Show preview
+    const url = URL.createObjectURL(file);
+    scanPreview.src = url;
+    scanPreview.style.display = "block";
+    scanUploadLabel.style.display = "none";
+    scanProgress.style.display = "flex";
+    scanProgressText.textContent = "Cargando OCR...";
+    scanProgressBar.style.setProperty("--progress", "10%");
+
+    try {
+        await loadTesseract();
+        scanProgressText.textContent = "Leyendo ticket...";
+        scanProgressBar.style.setProperty("--progress", "30%");
+
+        const result = await Tesseract.recognize(file, "spa", {
+            logger: (m) => {
+                if (m.status === "recognizing text") {
+                    const pct = Math.round(30 + m.progress * 60);
+                    scanProgressBar.style.setProperty("--progress", pct + "%");
+                    scanProgressText.textContent = "Leyendo... " + Math.round(m.progress * 100) + "%";
+                }
+            }
+        });
+
+        scanProgressBar.style.setProperty("--progress", "95%");
+        scanProgressText.textContent = "Analizando productos...";
+
+        const products = parseTicket(result.data.text);
+        scanProgressBar.style.setProperty("--progress", "100%");
+
+        if (products.length === 0) {
+            scanProgressText.textContent = "No se detectaron productos. Intenta con otra foto.";
+            return;
+        }
+
+        detectedProducts = products;
+        renderScanResults(products);
+        scanProgress.style.display = "none";
+        scanResults.style.display = "block";
+
+    } catch (err) {
+        console.error("OCR error:", err);
+        scanProgressText.textContent = "Error al procesar. Intenta con otra foto.";
+    }
+});
+
+// ──────────────────────────────────────────────
+// Parse ticket text into product names
+// ──────────────────────────────────────────────
+function parseTicket(rawText) {
+    const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
+    const products = [];
+
+    // Palabras/patrones a ignorar (cabeceras, totales, datos tienda, etc.)
+    const skipPatterns = [
+        /^(total|subtotal|iva|i\.v\.a|base|imponible|cambio|efectivo|tarjeta|visa|mastercard)/i,
+        /^(nif|cif|c\.i\.f|tel[eé]f|factura|ticket|n[uú]m|fecha|hora|caja|op\.|tienda)/i,
+        /^(gracias|bienvenid|atendid|le\s+ha\s+atendido|vuelva|fidelidad)/i,
+        /^(dto|descuento|ahorro|promo|oferta|tarjeta\s+cl)/i,
+        /^(mercadona|lidl|carrefour|aldi|dia|eroski|alcampo|hipercor|bonpreu|condis|caprabo|consum)/i,
+        /^(supermercado|s\.a\.|s\.l\.|sociedad|direc)/i,
+        /^\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/,     // Fechas
+        /^\d{5,}/,                                // Códigos largos
+        /^[\d\s.,€$%]+$/,                         // Solo números/precios
+        /^\*+/,                                   // Separadores
+        /^-+$/,                                   // Separadores
+        /^=+$/,                                   // Separadores
+        /^[A-Z]{1,3}\d{6,}/,                     // Códigos de barras
+        /^\d+[xX]\s/,                            // "2x ..." cantidad
+    ];
+
+    for (const line of lines) {
+        // Ignorar líneas muy cortas o muy largas
+        if (line.length < 3 || line.length > 60) continue;
+
+        // Comprobar si es línea a ignorar
+        if (skipPatterns.some(p => p.test(line))) continue;
+
+        // Extraer nombre del producto:
+        // Los tickets suelen tener: NOMBRE_PRODUCTO  PRECIO
+        // Quitamos precio del final (números con , o . como decimales)
+        let name = line
+            .replace(/\s+\d+[.,]\d{2}\s*[€]?\s*$/,  "")  // "  2,35 €" al final
+            .replace(/\s+\d+[.,]\d{2}$/,              "")  // "  2.35" al final
+            .replace(/^\d+\s+/,                        "")  // "2 " al inicio (cantidad)
+            .replace(/^\d+[.,]\d{3}\s*/,               "")  // código tipo "123.456"
+            .replace(/\s{2,}/g,                        " ") // múltiples espacios
+            .trim();
+
+        // Ignorar si quedó vacío, solo números, o muy corto
+        if (!name || name.length < 3 || /^[\d\s.,€%]+$/.test(name)) continue;
+
+        // Capitalizar: primera letra mayúscula, resto minúscula
+        name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+
+        // Evitar duplicados
+        if (!products.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+            products.push({ name, selected: true });
+        }
+    }
+
+    return products;
+}
+
+// ──────────────────────────────────────────────
+// Render detected products in modal
+// ──────────────────────────────────────────────
+function renderScanResults(products) {
+    scanResultsList.innerHTML = "";
+    products.forEach((p, i) => {
+        const li = document.createElement("li");
+        li.className = "scan-result-item";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = p.selected;
+        cb.addEventListener("change", () => { detectedProducts[i].selected = cb.checked; });
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "scan-item-name";
+        nameSpan.textContent = p.name;
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "scan-item-remove";
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", () => {
+            detectedProducts.splice(i, 1);
+            renderScanResults(detectedProducts);
+        });
+
+        li.append(cb, nameSpan, removeBtn);
+        scanResultsList.appendChild(li);
+    });
+}
+
+// ──────────────────────────────────────────────
+// Add scanned products to Firestore
+// ──────────────────────────────────────────────
+scanAddAll.addEventListener("click", async () => {
+    const toAdd = detectedProducts.filter(p => p.selected);
+    if (toAdd.length === 0) return;
+
+    scanAddAll.disabled = true;
+    scanAddAll.textContent = "Añadiendo...";
+
+    const promises = toAdd.map(p =>
+        addDoc(itemsRef, {
+            text: p.name,
+            category: "Otros",
+            checked: false,
+            createdAt: serverTimestamp()
+        })
+    );
+
+    await Promise.all(promises);
+    closeScanModal();
+});
