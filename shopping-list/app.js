@@ -211,15 +211,18 @@ if ("serviceWorker" in navigator) {
 }
 
 // ──────────────────────────────────────────────
-// PWA Install button
+// PWA Install button (solo en smartphones)
 // ──────────────────────────────────────────────
 const installBtn = document.getElementById("installBtn");
 let deferredPrompt = null;
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    installBtn.style.display = "inline-flex";
+    if (isMobile) {
+        installBtn.style.display = "inline-flex";
+    }
 });
 
 installBtn.addEventListener("click", async () => {
