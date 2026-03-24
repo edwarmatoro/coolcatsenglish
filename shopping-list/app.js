@@ -19,6 +19,7 @@ import {
     onSnapshot,
     doc,
     serverTimestamp,
+    deleteField,
     query,
     orderBy
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
@@ -209,7 +210,8 @@ function renderList(docs) {
         const ul = document.createElement("ul");
         ul.className = "category-items";
         grouped[cat].forEach(docSnap => {
-            ul.appendChild(createItemElement(docSnap.id, docSnap.data().text, docSnap.data().checked));
+            const data = docSnap.data();
+            ul.appendChild(createItemElement(docSnap.id, data.text, data.checked, data.checkedAt));
         });
 
         section.appendChild(ul);
@@ -220,7 +222,7 @@ function renderList(docs) {
 // ──────────────────────────────────────────────
 // Create list item element
 // ──────────────────────────────────────────────
-function createItemElement(id, text, checked) {
+function createItemElement(id, text, checked, checkedAt) {
     const li = document.createElement("li");
     li.className  = "list-item" + (checked ? " checked" : "");
     li.dataset.id = id;
@@ -230,6 +232,9 @@ function createItemElement(id, text, checked) {
     checkbox.checked = checked;
     checkbox.addEventListener("change", () => toggleItem(id, checkbox.checked));
 
+    const textWrapper = document.createElement("div");
+    textWrapper.className = "item-text-wrapper";
+
     const label = document.createElement("span");
     label.className   = "item-label";
     label.textContent = text;
@@ -238,13 +243,26 @@ function createItemElement(id, text, checked) {
         toggleItem(id, checkbox.checked);
     });
 
+    textWrapper.appendChild(label);
+
+    if (checked && checkedAt) {
+        const date = checkedAt.toDate ? checkedAt.toDate() : new Date(checkedAt);
+        const dateStr = date.toLocaleDateString("es-ES", {
+            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+        });
+        const dateSpan = document.createElement("span");
+        dateSpan.className = "item-checked-date";
+        dateSpan.textContent = "✓ " + dateStr;
+        textWrapper.appendChild(dateSpan);
+    }
+
     const deleteBtn = document.createElement("button");
     deleteBtn.className   = "btn-delete";
     deleteBtn.textContent = "x";
     deleteBtn.setAttribute("aria-label", "Eliminar");
     deleteBtn.addEventListener("click", () => removeItem(id));
 
-    li.append(checkbox, label, deleteBtn);
+    li.append(checkbox, textWrapper, deleteBtn);
     return li;
 }
 
@@ -265,7 +283,13 @@ addForm.addEventListener("submit", async (e) => {
 // Toggle / Delete / Clear
 // ──────────────────────────────────────────────
 async function toggleItem(id, checked) {
-    await updateDoc(doc(db, "items", id), { checked });
+    const data = { checked };
+    if (checked) {
+        data.checkedAt = serverTimestamp();
+    } else {
+        data.checkedAt = deleteField();
+    }
+    await updateDoc(doc(db, "items", id), data);
 }
 
 async function removeItem(id) {

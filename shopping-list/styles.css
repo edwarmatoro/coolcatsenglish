@@ -348,6 +348,25 @@ body {
     opacity: 0.6;
 }
 
+/* ── Text wrapper (label + date) ── */
+.item-text-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.item-text-wrapper .item-label {
+    flex: initial;
+}
+
+.item-checked-date {
+    font-size: 0.7rem;
+    color: var(--success);
+    opacity: 0.8;
+}
+
 /* ── Delete button ── */
 .btn-delete {
     background: none;
