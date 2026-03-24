@@ -211,6 +211,33 @@ if ("serviceWorker" in navigator) {
 }
 
 // ──────────────────────────────────────────────
+// PWA Install button
+// ──────────────────────────────────────────────
+const installBtn = document.getElementById("installBtn");
+let deferredPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = "inline-flex";
+});
+
+installBtn.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+        installBtn.style.display = "none";
+    }
+    deferredPrompt = null;
+});
+
+// Hide button if already installed (standalone mode)
+if (window.matchMedia("(display-mode: standalone)").matches) {
+    installBtn.style.display = "none";
+}
+
+// ──────────────────────────────────────────────
 // Auth state
 // ──────────────────────────────────────────────
 onAuthStateChanged(auth, (user) => {
