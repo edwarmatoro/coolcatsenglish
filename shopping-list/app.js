@@ -440,6 +440,7 @@ function renderRepeatChips() {
 // Render list grouped by category
 // ──────────────────────────────────────────────
 function renderList(docs) {
+    const scrollY = window.scrollY;
     shoppingList.querySelectorAll(".category-group, .list-item").forEach(el => el.remove());
 
     // Update known products for suggestions (always from ALL docs)
@@ -505,6 +506,9 @@ function renderList(docs) {
         section.appendChild(ul);
         shoppingList.appendChild(section);
     });
+
+    // Restore scroll position after re-render
+    requestAnimationFrame(() => window.scrollTo(0, scrollY));
 }
 
 // ──────────────────────────────────────────────
