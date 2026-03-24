@@ -523,6 +523,97 @@ body {
     border-color: var(--primary);
 }
 
+/* ── Frequent products button ── */
+.btn-frequent {
+    font-size: 0.8rem;
+    color: #d97706;
+    background: none;
+    border: 1px solid #d97706;
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.btn-frequent:hover {
+    background: #d97706;
+    color: white;
+}
+
+.btn-frequent.active {
+    background: #d97706;
+    color: white;
+}
+
+/* ── Frequent panel ── */
+.frequent-panel {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    animation: slideIn 0.2s ease;
+}
+
+.frequent-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.frequent-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.82rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.frequent-chip:hover {
+    border-color: var(--primary);
+    background: rgba(8, 145, 178, 0.08);
+    transform: translateY(-1px);
+}
+
+.frequent-chip.already-in-list {
+    opacity: 0.45;
+    cursor: default;
+    text-decoration: line-through;
+}
+
+.frequent-chip.already-in-list:hover {
+    transform: none;
+    border-color: var(--border);
+    background: var(--bg);
+}
+
+.frequent-chip.just-added {
+    background: rgba(22, 163, 74, 0.15);
+    border-color: var(--success);
+}
+
+.frequent-count {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.frequent-empty {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-style: italic;
+    padding: 0.5rem 0;
+}
+
 /* ── Scan ticket button ── */
 .btn-scan {
     font-size: 0.8rem;

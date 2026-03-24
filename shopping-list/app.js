@@ -195,6 +195,9 @@ const itemCount       = document.getElementById("itemCount");
 const clearChecked    = document.getElementById("clearChecked");
 const clearAll        = document.getElementById("clearAll");
 const filterPending   = document.getElementById("filterPending");
+const showFrequentBtn = document.getElementById("showFrequent");
+const frequentPanel   = document.getElementById("frequentPanel");
+const frequentChips   = document.getElementById("frequentChips");
 const autoCatHint     = document.getElementById("autoCatHint");
 const suggestions     = document.getElementById("suggestions");
 
@@ -339,6 +342,81 @@ filterPending.addEventListener("click", () => {
     filterPending.innerHTML = showOnlyPending ? "&#128064; Ver todo" : "&#128065; Por comprar";
     renderList(lastDocs);
 });
+
+// ──────────────────────────────────────────────
+// Frequent products panel
+// ──────────────────────────────────────────────
+showFrequentBtn.addEventListener("click", () => {
+    const isOpen = frequentPanel.style.display !== "none";
+    if (isOpen) {
+        frequentPanel.style.display = "none";
+        showFrequentBtn.classList.remove("active");
+        return;
+    }
+    renderFrequentChips();
+    frequentPanel.style.display = "block";
+    showFrequentBtn.classList.add("active");
+});
+
+function renderFrequentChips() {
+    frequentChips.innerHTML = "";
+
+    // Count purchases per product name (from all docs)
+    const purchaseCounts = [];
+    lastDocs.forEach(d => {
+        const data = d.data();
+        const count = (data.purchaseHistory && data.purchaseHistory.length) || 0;
+        if (count > 0) {
+            purchaseCounts.push({ text: data.text, count, id: d.id, checked: !!data.checked });
+        }
+    });
+
+    // Sort by purchase count descending, take top 15
+    purchaseCounts.sort((a, b) => b.count - a.count);
+    const top = purchaseCounts.slice(0, 15);
+
+    if (top.length === 0) {
+        frequentChips.innerHTML = '<span class="frequent-empty">Aún no hay historial de compras</span>';
+        return;
+    }
+
+    // Products currently in the list (not checked) - already pending
+    const pendingNames = new Set(
+        lastDocs.filter(d => !d.data().checked).map(d => d.data().text.toLowerCase())
+    );
+
+    top.forEach(item => {
+        const chip = document.createElement("button");
+        chip.className = "frequent-chip";
+        const isPending = pendingNames.has(item.text.toLowerCase());
+        if (isPending) chip.classList.add("already-in-list");
+
+        chip.innerHTML = `${item.text} <span class="frequent-count">×${item.count}</span>`;
+        chip.title = isPending ? "Ya está en la lista" : `Añadir "${item.text}"`;
+
+        chip.addEventListener("click", async () => {
+            if (isPending) return; // already in list, unchecked
+
+            const existing = knownProducts.get(item.text.toLowerCase());
+            if (existing && existing.checked) {
+                // Re-purchase: mark checked again (adds date)
+                await toggleItem(existing.id, true);
+                chip.classList.add("just-added");
+                setTimeout(() => chip.classList.remove("just-added"), 600);
+            } else if (!existing) {
+                // Deleted product, re-add
+                const category = guessCategory(item.text);
+                await addDoc(itemsRef, { text: item.text, category, checked: false, createdAt: serverTimestamp() });
+                chip.classList.add("just-added");
+                setTimeout(() => chip.classList.remove("just-added"), 600);
+            }
+            // Re-render chips to update state
+            setTimeout(() => renderFrequentChips(), 800);
+        });
+
+        frequentChips.appendChild(chip);
+    });
+}
 
 // ──────────────────────────────────────────────
 // Render list grouped by category
