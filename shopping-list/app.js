@@ -252,7 +252,7 @@ function createItemElement(id, text, checked, checkedAt) {
         });
         const dateSpan = document.createElement("span");
         dateSpan.className = "item-checked-date";
-        dateSpan.textContent = "✓ " + dateStr;
+        dateSpan.textContent = "Compra hecha: " + dateStr;
         textWrapper.appendChild(dateSpan);
     }
 
