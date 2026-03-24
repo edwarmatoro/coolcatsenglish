@@ -340,6 +340,9 @@ filterPending.addEventListener("click", () => {
     showOnlyPending = !showOnlyPending;
     filterPending.classList.toggle("active", showOnlyPending);
     filterPending.innerHTML = showOnlyPending ? "&#128064; Ver todo" : "&#128065; Por comprar";
+    // Force full rebuild when filter changes
+    shoppingList.querySelectorAll(".category-group").forEach(el => el.remove());
+    renderedItems.clear();
     renderList(lastDocs);
 });
 
@@ -437,12 +440,11 @@ function renderRepeatChips() {
 }
 
 // ──────────────────────────────────────────────
-// Render list grouped by category
+// Render list grouped by category (smart diff)
 // ──────────────────────────────────────────────
-function renderList(docs) {
-    const scrollY = window.scrollY;
-    shoppingList.querySelectorAll(".category-group, .list-item").forEach(el => el.remove());
+let renderedItems = new Map(); // id → { checked, text, note, purchaseHistory }
 
+function renderList(docs) {
     // Update known products for suggestions (always from ALL docs)
     knownProducts.clear();
     docs.forEach(d => {
@@ -451,64 +453,153 @@ function renderList(docs) {
     });
 
     if (docs.length === 0) {
+        shoppingList.querySelectorAll(".category-group").forEach(el => el.remove());
         emptyState.style.display = "block";
         emptyState.textContent = "La lista está vacía. ¡Añade algo! 🧺";
         itemCount.textContent = "";
+        renderedItems.clear();
         return;
     }
 
     const total   = docs.length;
     const checked = docs.filter(d => d.data().checked).length;
-    const pending = total - checked;
     itemCount.textContent = checked + "/" + total + " marcados";
 
     // Apply filter
     const visibleDocs = showOnlyPending ? docs.filter(d => !d.data().checked) : docs;
 
     if (visibleDocs.length === 0) {
+        shoppingList.querySelectorAll(".category-group").forEach(el => el.remove());
         emptyState.style.display = "block";
         emptyState.textContent = "✅ ¡Todo comprado!";
+        renderedItems.clear();
         return;
     }
 
     emptyState.style.display = "none";
 
-    // Group docs by category in CATEGORIES order
+    // Build desired state: grouped & sorted
     const grouped = {};
     CATEGORIES.forEach(cat => { grouped[cat] = []; });
-
     visibleDocs.forEach(docSnap => {
         const cat = docSnap.data().category || "Otros";
         if (!grouped[cat]) grouped[cat] = [];
         grouped[cat].push(docSnap);
     });
 
-    CATEGORIES.forEach(cat => {
-        if (grouped[cat].length === 0) return;
+    // Track which IDs should be visible
+    const visibleIds = new Set(visibleDocs.map(d => d.id));
 
-        const section = document.createElement("div");
-        section.className = "category-group";
-
-        const heading = document.createElement("h3");
-        heading.className = "category-heading";
-        heading.textContent = cat;
-        section.appendChild(heading);
-
-        const ul = document.createElement("ul");
-        ul.className = "category-items";
-        grouped[cat]
-            .sort((a, b) => (a.data().text || "").localeCompare(b.data().text || "", "es"))
-            .forEach(docSnap => {
-            const data = docSnap.data();
-            ul.appendChild(createItemElement(docSnap.id, data.text, data.checked, data.purchaseHistory, data.note));
-        });
-
-        section.appendChild(ul);
-        shoppingList.appendChild(section);
+    // Remove items no longer visible
+    renderedItems.forEach((_, id) => {
+        if (!visibleIds.has(id)) {
+            const el = shoppingList.querySelector(`.list-item[data-id="${id}"]`);
+            if (el) el.remove();
+            renderedItems.delete(id);
+        }
     });
 
-    // Restore scroll position after re-render
-    requestAnimationFrame(() => window.scrollTo(0, scrollY));
+    // For each category, ensure section exists and update items
+    CATEGORIES.forEach(cat => {
+        const catDocs = grouped[cat];
+        let section = shoppingList.querySelector(`.category-group[data-cat="${cat}"]`);
+
+        if (catDocs.length === 0) {
+            if (section) section.remove();
+            return;
+        }
+
+        // Create section if missing
+        if (!section) {
+            section = document.createElement("div");
+            section.className = "category-group";
+            section.dataset.cat = cat;
+            const heading = document.createElement("h3");
+            heading.className = "category-heading";
+            heading.textContent = cat;
+            section.appendChild(heading);
+            const ul = document.createElement("ul");
+            ul.className = "category-items";
+            section.appendChild(ul);
+            // Insert in correct category order
+            const catIndex = CATEGORIES.indexOf(cat);
+            let inserted = false;
+            for (const existingSec of shoppingList.querySelectorAll(".category-group")) {
+                const existingCatIndex = CATEGORIES.indexOf(existingSec.dataset.cat);
+                if (existingCatIndex > catIndex) {
+                    shoppingList.insertBefore(section, existingSec);
+                    inserted = true;
+                    break;
+                }
+            }
+            if (!inserted) shoppingList.appendChild(section);
+        }
+
+        const ul = section.querySelector(".category-items");
+        const sortedDocs = catDocs.sort((a, b) =>
+            (a.data().text || "").localeCompare(b.data().text || "", "es")
+        );
+
+        sortedDocs.forEach(docSnap => {
+            const data = docSnap.data();
+            const id = docSnap.id;
+            const prev = renderedItems.get(id);
+
+            // Serialize purchaseHistory for comparison
+            const phKey = (data.purchaseHistory || []).map(ts => {
+                const d = ts.toDate ? ts.toDate() : new Date(ts);
+                return d.getTime();
+            }).join(",");
+            const prevPhKey = prev ? prev.phKey : "";
+
+            const changed = !prev
+                || prev.checked !== !!data.checked
+                || prev.text !== data.text
+                || prev.note !== (data.note || "")
+                || phKey !== prevPhKey;
+
+            if (changed) {
+                // Remove old element if exists
+                const oldEl = ul.querySelector(`.list-item[data-id="${id}"]`);
+                if (oldEl) oldEl.remove();
+
+                // Create new element
+                const newEl = createItemElement(id, data.text, data.checked, data.purchaseHistory, data.note);
+
+                // Insert in sorted position
+                const existingItems = [...ul.querySelectorAll(".list-item")];
+                let insertedItem = false;
+                for (const item of existingItems) {
+                    const itemText = item.querySelector(".item-label")?.textContent || "";
+                    if (data.text.localeCompare(itemText, "es") < 0) {
+                        ul.insertBefore(newEl, item);
+                        insertedItem = true;
+                        break;
+                    }
+                }
+                if (!insertedItem) ul.appendChild(newEl);
+
+                // Don't animate on updates, only on new items
+                if (prev) newEl.style.animation = "none";
+
+                renderedItems.set(id, {
+                    checked: !!data.checked,
+                    text: data.text,
+                    note: data.note || "",
+                    phKey
+                });
+            }
+        });
+
+        // Remove items from this category that shouldn't be here anymore
+        ul.querySelectorAll(".list-item").forEach(el => {
+            const id = el.dataset.id;
+            if (!sortedDocs.some(d => d.id === id)) {
+                el.remove();
+                renderedItems.delete(id);
+            }
+        });
+    });
 }
 
 // ──────────────────────────────────────────────
