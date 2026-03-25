@@ -1328,21 +1328,23 @@ async function removeItem(id) {
 // ──────────────────────────────────────────────
 // Ticket scanner (Tesseract.js OCR)
 // ──────────────────────────────────────────────
-const scanTicketBtn  = document.getElementById("scanTicket");
-const scanModal      = document.getElementById("scanModal");
-const scanClose      = document.getElementById("scanClose");
-const scanFileInput  = document.getElementById("scanFileInput");
-const scanUploadLabel = document.getElementById("scanUploadLabel");
-const scanPreview    = document.getElementById("scanPreview");
-const scanProgress   = document.getElementById("scanProgress");
+const scanTicketBtn   = document.getElementById("scanTicket");
+const scanModal       = document.getElementById("scanModal");
+const scanClose       = document.getElementById("scanClose");
+const scanCameraInput = document.getElementById("scanCameraInput");
+const scanGalleryInput = document.getElementById("scanGalleryInput");
+const scanUploadOptions = document.getElementById("scanUploadOptions");
+const scanPreview     = document.getElementById("scanPreview");
+const scanRetryPhoto  = document.getElementById("scanRetryPhoto");
+const scanProgress    = document.getElementById("scanProgress");
 const scanProgressBar = document.getElementById("scanProgressBar");
 const scanProgressText = document.getElementById("scanProgressText");
-const scanResults    = document.getElementById("scanResults");
+const scanResults     = document.getElementById("scanResults");
 const scanResultsList = document.getElementById("scanResultsList");
-const scanAddAll     = document.getElementById("scanAddAll");
-const scanConfirmAdd = document.getElementById("scanConfirmAdd");
-const scanSummary    = document.getElementById("scanSummary");
-const scanCancel     = document.getElementById("scanCancel");
+const scanAddAll      = document.getElementById("scanAddAll");
+const scanConfirmAdd  = document.getElementById("scanConfirmAdd");
+const scanSummary     = document.getElementById("scanSummary");
+const scanCancel      = document.getElementById("scanCancel");
 
 let tesseractLoaded = false;
 let detectedProducts = [];
@@ -1367,10 +1369,12 @@ function resetScanUI() {
     scanPreview.style.display = "none";
     scanProgress.style.display = "none";
     scanResults.style.display = "none";
-    scanUploadLabel.style.display = "flex";
+    scanRetryPhoto.style.display = "none";
+    scanUploadOptions.style.display = "flex";
     scanResultsList.innerHTML = "";
     scanResultsList.style.display = "";
-    scanFileInput.value = "";
+    scanCameraInput.value = "";
+    scanGalleryInput.value = "";
     detectedProducts = [];
     productsToConfirm = [];
     productsToMark = [];
@@ -1381,6 +1385,11 @@ function resetScanUI() {
     scanSummary.innerHTML = "";
     scanConfirmAdd.style.display = "none";
 }
+
+// "Retry photo" button
+scanRetryPhoto.addEventListener("click", () => {
+    resetScanUI();
+});
 
 // Load Tesseract.js lazily
 async function loadTesseract() {
@@ -1394,15 +1403,18 @@ async function loadTesseract() {
     });
 }
 
-scanFileInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
+// Both inputs trigger the same processing
+scanCameraInput.addEventListener("change", (e) => processTicketFile(e.target.files[0]));
+scanGalleryInput.addEventListener("change", (e) => processTicketFile(e.target.files[0]));
+
+async function processTicketFile(file) {
     if (!file) return;
 
     // Show preview
     const url = URL.createObjectURL(file);
     scanPreview.src = url;
     scanPreview.style.display = "block";
-    scanUploadLabel.style.display = "none";
+    scanUploadOptions.style.display = "none";
     scanProgress.style.display = "flex";
     scanProgressText.textContent = "Cargando OCR...";
     scanProgressBar.style.setProperty("--progress", "10%");
@@ -1425,11 +1437,15 @@ scanFileInput.addEventListener("change", async (e) => {
         scanProgressBar.style.setProperty("--progress", "95%");
         scanProgressText.textContent = "Analizando productos...";
 
+        // Log raw OCR for debugging
+        console.log("──── OCR RAW TEXT ────\n" + result.data.text + "\n──────────────────────");
+
         const products = parseTicket(result.data.text);
         scanProgressBar.style.setProperty("--progress", "100%");
 
         if (products.length === 0) {
             scanProgressText.textContent = "No se detectaron productos. Intenta con otra foto.";
+            scanRetryPhoto.style.display = "block";
             return;
         }
 
@@ -1437,169 +1453,289 @@ scanFileInput.addEventListener("change", async (e) => {
         renderScanResults(products);
         scanProgress.style.display = "none";
         scanResults.style.display = "block";
+        scanRetryPhoto.style.display = "block";
 
     } catch (err) {
         console.error("OCR error:", err);
         scanProgressText.textContent = "Error al procesar. Intenta con otra foto.";
+        scanRetryPhoto.style.display = "block";
     }
-});
+}
 
 // ──────────────────────────────────────────────
-// Parse ticket text into product names (enhanced with product bank)
+// Parse ticket text into product names (enhanced NLP)
+// Strategy: extract candidate names, then score each
+// against the product bank + known products.
+// Only keep candidates with high confidence.
 // ──────────────────────────────────────────────
 function parseTicket(rawText) {
     const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
-    const products = [];
+    const candidates = [];
 
-    // Líneas completas a descartar
-    const skipPatterns = [
-        /^(total|subtotal|iva|i\.v\.a|base\s*impon|cambio|efectivo|tarjeta|visa|mastercard|importe)/i,
-        /^(nif|cif|c\.i\.f|tel[eé]f|factura|ticket|n[uú]m|fecha|hora|caja|op[\.:]\s*\d)/i,
-        /^(gracias|bienvenid|atendid|le\s+ha\s+atendido|vuelva|fidelidad|cliente)/i,
-        /^(dto\.?|descuento|ahorro|promo|oferta|tarjeta\s+(cl|banc))/i,
-        /^(mercadona|lidl|carrefour|aldi|dia\b|eroski|alcampo|hipercor|bonpreu|condis|caprabo|consum)/i,
-        /^(supermercado|s\.a\.|s\.l\.|sociedad|direc|www\.|http)/i,
-        /^(descripci[oó]n|p[\.\s]*unit|unid|precio|imp[\.\s]*€)/i,
-        /^\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/,
-        /^\d{5,}/,
-        /^[\d\s.,€$%()]+$/,
-        /^[\*\-=_\.]{3,}$/,
-        /^[A-Z]{1,3}\d{6,}/,
+    // ── Phase 1: Skip obviously non-product lines ──
+    const skipLine = [
+        // Store headers & footers
+        /^(mercadona|lidl|carrefour|aldi|dia\b|eroski|alcampo|hipercor|bonpreu|condis|caprabo|consum|bonàrea|simply)/i,
+        /^(supermercado|s\.a\.|s\.l\.|sociedad|grupo|direc|calle|avda|avenida|plaza|c\/)/i,
+        /^(www\.|http|\.com|\.es)/i,
+        // Financial/admin
+        /^(total|subtotal|suma|iva|i\.v\.a|igic|base\s*impon|cambio|efectivo|tarjeta|visa|mastercard|importe|pago)/i,
+        /^(nif|cif|c\.i\.f|n\.i\.f|tel[eé]f|fax|factura\s*(simpl)?|ticket|recibo|n[uú]m|documento)/i,
+        /^(fecha|hora|caja|terminal|turno|op[\.:]\s*\d|operaci|cajero)/i,
+        // Pleasantries
+        /^(gracias|bienvenid|atendid|le\s+ha\s+atendido|vuelva|hasta\s+pronto)/i,
+        /^(fidelidad|cliente|tarjeta\s+(cl|banc|fidel)|socio|puntos|acumulado)/i,
+        // Discounts/promos
+        /^(dto\.?|descuento|ahorro|promo|oferta|rebaja|2[\s×x]\s*1|segunda\s+unid)/i,
+        // Table headers
+        /^(descripci[oó]n|p[\.\s]*v[\.\s]*p|p[\.\s]*unit|unid|precio|imp[\.\s]*€|cant[\.\s]|art[ií]culo)/i,
+        // Pure numeric / separators / codes
+        /^\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/,     // Dates
+        /^\d{5,}/,                                 // Long codes
+        /^[\d\s.,€$%()]+$/,                        // Only numbers/prices
+        /^[\*\-=_\.#]{3,}$/,                        // Separators
+        /^[A-Z]{1,3}\d{6,}/,                       // Barcodes
         /^op\s*:/i,
+        /^\(\d+\)/,                                 // (1), (2) etc
+        /^[A-Z]\s*$/,                               // Single letter
+        /^[\d\s]+$/,                                 // Only digits/spaces
+        /^reg\s*[\.:]/i,                            // REG:
+        // Weight/quantity lines
+        /^\d+[.,]\d+\s*(kg|g|l|ml|ud|un)\b/i,
+        /^peso\s/i,
+        // Payment methods
+        /^(débito|crédito|contactless|pin|autorización|ref[\.\s]*\d)/i,
     ];
 
-    // Regex para línea de producto: "2 AGUA MINERAL  0,63  1,26"
-    const productLineRegex = /^(\d+\s+)?([A-ZÁÉÍÓÚÑa-záéíóúñ][\w\s.\-\/(),áéíóúñÁÉÍÓÚÑ]+?)(?:\s{2,}|\s+)(\d+[.,]\d{2})\s*(?:[€]?\s*(\d+[.,]\d{2})?\s*[€]?)?$/;
+    // Words that if they appear anywhere in the line, it's probably not a product
+    const skipWords = [
+        /\btotal\b/i, /\bsubtotal\b/i, /\bcambio\b/i, /\befectivo\b/i,
+        /\btarjeta\b/i, /\bfactura\b/i, /\bticket\b/i, /\bfidelidad\b/i,
+        /\bpuntos\b/i, /\biva\b/i, /\bi\.v\.a\b/i, /\bbase\s*imp/i,
+        /\brecibo\b/i, /\bautorizac/i, /\bterminal\b/i,
+    ];
 
     for (const line of lines) {
         if (line.length < 3 || line.length > 80) continue;
-        if (skipPatterns.some(p => p.test(line))) continue;
+        if (skipLine.some(p => p.test(line))) continue;
+        if (skipWords.some(p => p.test(line))) continue;
 
-        let name = null;
+        // ── Phase 2: Extract product name from line ──
+        let name = extractProductName(line);
+        if (!name || name.length < 2) continue;
 
-        // Intento 1: regex estructurado
-        const match = line.match(productLineRegex);
-        if (match) {
-            name = match[2].trim();
-        }
-
-        // Intento 2: limpiar manualmente
-        if (!name) {
-            name = line
-                .replace(/\s+\d+[.,]\d{2}\s*[€]?\s*/g, " ")
-                .replace(/^\d+\s+/,                       "")
-                .replace(/\s*[—–\-]{2,}\s*/g,             "")
-                .replace(/\s*\d{2,}\s*$/,                 "")
-                .replace(/\s{2,}/g,                       " ")
-                .trim();
-        }
-
-        if (!name || name.length < 3) continue;
-
-        // Limpiar caracteres basura de OCR
+        // Clean OCR junk
         name = name
-            .replace(/[£|{}~`¢¥°©®™\[\]<>]/g, "")
-            .replace(/\b\d{2,}\b/g, "")
+            .replace(/[£|{}~`¢¥°©®™\[\]<>\\@#^]/g, "")
+            .replace(/\b\d{3,}\b/g, "")          // remove 3+ digit numbers (codes)
             .replace(/\s{2,}/g, " ")
             .trim();
 
-        if (!name || name.length < 3) continue;
+        if (!name || name.length < 2) continue;
         if (/^[\d\s.,€$%\-]+$/.test(name)) continue;
-        if (/^(descripci|p[\.\s]*unit|importe|unid)/i.test(name)) continue;
 
-        // Capitalizar cada palabra
+        // Capitalize
         name = name.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
 
-        // Expandir abreviaturas comunes
+        // Expand abbreviations
         name = expandAbbreviations(name);
+        if (!name || name.length < 2) continue;
 
-        if (!name || name.length < 3) continue;
-
-        // Try to match against product bank + known products for better names
-        name = matchToProductBank(name);
-
-        // Evitar duplicados
-        if (!products.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-            products.push({ name, selected: true });
-        }
+        candidates.push(name);
     }
+
+    // ── Phase 3: Score and filter candidates ──
+    const products = [];
+    const seenLower = new Set();
+
+    for (const candidate of candidates) {
+        const result = scoreCandidate(candidate);
+
+        // Only keep if confidence is above threshold
+        if (result.score < 30) {
+            console.log(`  ✗ REJECTED (score ${result.score}): "${candidate}" → "${result.name}"`);
+            continue;
+        }
+
+        const key = result.name.toLowerCase();
+        if (seenLower.has(key)) continue;
+        seenLower.add(key);
+
+        console.log(`  ✓ ACCEPTED (score ${result.score}): "${candidate}" → "${result.name}"`);
+        products.push({ name: result.name, selected: true, score: result.score });
+    }
+
+    // Sort by score descending
+    products.sort((a, b) => b.score - a.score);
 
     return products;
 }
 
 /**
- * Try to match an OCR-detected name to a known product from the bank or Firestore.
- * Uses fuzzy matching: exact, contains, and Levenshtein distance.
+ * Extract the product name from a ticket line.
+ * Handles formats like:
+ *   "2 AGUA MINERAL  0,63  1,26"
+ *   "LECHE ENTERA 1L    1,05€"
+ *   "PLATANOS      1,29"
+ *   "0,850 PECHUGA POLLO  3,29  2,80"
  */
-function matchToProductBank(ocrName) {
-    const lower = ocrName.toLowerCase().trim();
-
-    // 1) Exact match in product bank
-    if (_productBankMap.has(lower)) return _productBankMap.get(lower);
-
-    // 2) Exact match in known products (Firestore)
-    for (const [key, val] of knownProducts) {
-        if (key === lower) return val.text;
+function extractProductName(line) {
+    // Try structured regex: [qty] NAME [prices]
+    // Pattern: optional leading number/weight, then text, then price(s)
+    const structured = line.match(
+        /^(?:\d+[.,]?\d*\s+)?([A-ZÁÉÍÓÚÑa-záéíóúñ][\wáéíóúñÁÉÍÓÚÑ\s.\-\/(),]+?)(?:\s{2,}|\s+)(\d+[.,]\d{2})\s*[€]?/
+    );
+    if (structured) {
+        return structured[1].trim();
     }
 
-    // 3) Product bank entry that contains or is contained by the OCR name
+    // Fallback: strip prices and quantities aggressively
+    let name = line
+        .replace(/\s+\d+[.,]\d{2}\s*[€]?\s*/g, " ")   // prices "1,29€"
+        .replace(/^\d+[.,]?\d*\s+/,              "")     // leading qty "2 " or "0,850 "
+        .replace(/\s+\d+[.,]\d{2}$/,             "")     // trailing price
+        .replace(/\s*[—–\-]{2,}\s*/g,            "")     // long dashes
+        .replace(/\s*\d{2,}\s*$/,                "")     // trailing numbers
+        .replace(/\s+[A-Z]?\d+[.,]\d+\s*$/,     "")     // "A4,50" at end
+        .replace(/\s{2,}/g,                      " ")
+        .trim();
+
+    return name || null;
+}
+
+/**
+ * Score a candidate product name.
+ * Returns { name: "Clean Name", score: 0-100 }
+ * Score > 70: very likely a product (exact/close match)
+ * Score 40-70: probable product (partial match or reasonable text)
+ * Score < 30: probably noise
+ */
+function scoreCandidate(candidate) {
+    const lower = candidate.toLowerCase().trim();
+
+    // 1) Exact match in product bank → 100
+    if (_productBankMap.has(lower)) {
+        return { name: _productBankMap.get(lower), score: 100 };
+    }
+
+    // 2) Exact match in known products (Firestore) → 95
+    for (const [key, val] of knownProducts) {
+        if (key === lower) return { name: val.text, score: 95 };
+    }
+
+    // 3) Product bank contains/is contained by candidate
     let bestMatch = null;
-    let bestScore = 0;
+    let bestMatchScore = 0;
 
     for (const bankProduct of PRODUCT_BANK) {
         const bankLower = bankProduct.toLowerCase();
 
-        // OCR name contains bank product name
-        if (lower.includes(bankLower) && bankLower.length > bestScore) {
-            bestMatch = bankProduct;
-            bestScore = bankLower.length;
-        }
-        // Bank product name contains OCR name
-        if (bankLower.includes(lower) && lower.length >= 4 && lower.length > bestScore * 0.8) {
-            if (!bestMatch || bankLower.length < bestMatch.length) {
+        // Candidate contains bank product name
+        if (lower.includes(bankLower) && bankLower.length >= 4) {
+            const overlap = bankLower.length / lower.length;
+            const s = 60 + Math.round(overlap * 30); // 60-90
+            if (s > bestMatchScore) {
                 bestMatch = bankProduct;
-                bestScore = lower.length;
+                bestMatchScore = s;
+            }
+        }
+        // Bank product contains candidate
+        if (bankLower.includes(lower) && lower.length >= 4) {
+            const overlap = lower.length / bankLower.length;
+            const s = 55 + Math.round(overlap * 30); // 55-85
+            if (s > bestMatchScore) {
+                bestMatch = bankProduct;
+                bestMatchScore = s;
             }
         }
     }
 
-    if (bestMatch && bestScore >= 4) return bestMatch;
-
-    // 4) Also check known Firestore products
+    // 4) Check known Firestore products the same way
     for (const [key, val] of knownProducts) {
-        if (lower.includes(key) && key.length > bestScore) {
-            bestMatch = val.text;
-            bestScore = key.length;
+        if (lower.includes(key) && key.length >= 4) {
+            const overlap = key.length / lower.length;
+            const s = 65 + Math.round(overlap * 30);
+            if (s > bestMatchScore) {
+                bestMatch = val.text;
+                bestMatchScore = s;
+            }
         }
         if (key.includes(lower) && lower.length >= 4) {
-            if (!bestMatch || key.length < bestMatch.length) {
+            const overlap = lower.length / key.length;
+            const s = 60 + Math.round(overlap * 30);
+            if (s > bestMatchScore) {
                 bestMatch = val.text;
-                bestScore = lower.length;
+                bestMatchScore = s;
             }
         }
     }
 
-    if (bestMatch && bestScore >= 4) return bestMatch;
+    if (bestMatch && bestMatchScore >= 50) {
+        return { name: bestMatch, score: bestMatchScore };
+    }
 
-    // 5) Fuzzy match: Levenshtein distance for short names (OCR errors)
+    // 5) Fuzzy match (Levenshtein) against bank
     if (lower.length >= 4) {
         let closestDist = Infinity;
         let closestName = null;
         for (const bankProduct of PRODUCT_BANK) {
             const bankLower = bankProduct.toLowerCase();
-            // Only compare similar-length names
-            if (Math.abs(bankLower.length - lower.length) > 3) continue;
+            if (Math.abs(bankLower.length - lower.length) > 2) continue;
             const dist = levenshtein(lower, bankLower);
-            const threshold = Math.max(2, Math.floor(lower.length * 0.3));
+            const threshold = Math.max(1, Math.floor(lower.length * 0.25));
             if (dist < closestDist && dist <= threshold) {
                 closestDist = dist;
                 closestName = bankProduct;
             }
         }
-        if (closestName) return closestName;
+        if (closestName) {
+            const s = 70 - (closestDist * 15); // 70 for dist=0, 55 for dist=1, etc.
+            return { name: closestName, score: Math.max(40, s) };
+        }
     }
 
-    return ocrName;
+    // 6) Also fuzzy-check Firestore products
+    if (lower.length >= 4) {
+        let closestDist = Infinity;
+        let closestName = null;
+        for (const [key, val] of knownProducts) {
+            if (Math.abs(key.length - lower.length) > 2) continue;
+            const dist = levenshtein(lower, key);
+            const threshold = Math.max(1, Math.floor(lower.length * 0.25));
+            if (dist < closestDist && dist <= threshold) {
+                closestDist = dist;
+                closestName = val.text;
+            }
+        }
+        if (closestName) {
+            const s = 65 - (closestDist * 15);
+            return { name: closestName, score: Math.max(40, s) };
+        }
+    }
+
+    // 7) No match found — apply heuristic score
+    //    Check if it "looks like" a product name
+    let heuristicScore = 25; // base: low confidence
+
+    // Bonus: it's in AUTO_CATEGORY dictionary
+    if (guessCategory(candidate) !== "Otros") heuristicScore += 25;
+
+    // Bonus: contains mostly letters (not numbers/symbols)
+    const letterRatio = (candidate.match(/[a-záéíóúñA-ZÁÉÍÓÚÑ]/g) || []).length / candidate.length;
+    if (letterRatio > 0.8) heuristicScore += 10;
+    if (letterRatio < 0.5) heuristicScore -= 15;
+
+    // Penalty: too short
+    if (candidate.length < 4) heuristicScore -= 15;
+
+    // Penalty: looks like a code or gibberish
+    if (/\d{3,}/.test(candidate)) heuristicScore -= 20;
+    if (/[A-Z]{5,}/.test(candidate) && !/[aeiouáéíóú]/i.test(candidate)) heuristicScore -= 20;
+
+    // Penalty: single word that's very short
+    if (!candidate.includes(" ") && candidate.length < 5) heuristicScore -= 10;
+
+    return { name: candidate, score: Math.max(0, Math.min(100, heuristicScore)) };
 }
 
 /**

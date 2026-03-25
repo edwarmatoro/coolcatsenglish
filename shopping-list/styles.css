@@ -866,24 +866,66 @@ body {
     gap: 1rem;
 }
 
+.scan-upload-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
 .scan-upload-label {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     padding: 1.5rem;
-    border: 2px dashed var(--border);
+    border: 2px dashed var(--primary);
     border-radius: var(--radius);
     cursor: pointer;
     font-weight: 600;
     color: var(--primary);
     transition: var(--transition);
     text-align: center;
+    background: rgba(8, 145, 178, 0.03);
+    font-size: 1rem;
 }
 
 .scan-upload-label:hover {
+    border-color: var(--primary-dk);
+    background: rgba(8, 145, 178, 0.08);
+}
+
+.scan-upload-gallery {
+    padding: 1rem;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--border);
+    color: var(--text-light);
+    font-size: 0.9rem;
+    background: none;
+}
+
+.scan-upload-gallery:hover {
     border-color: var(--primary);
+    color: var(--primary);
     background: rgba(8, 145, 178, 0.05);
+}
+
+.btn-scan-retry {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: var(--transition);
+    align-self: center;
+}
+
+.btn-scan-retry:hover {
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .scan-preview {

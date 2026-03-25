@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="/images/favicon.png">
     <link rel="apple-touch-icon" href="/images/favicon.png">
-    <link rel="stylesheet" href="styles.css?v=24">
+    <link rel="stylesheet" href="styles.css?v=25">
 </head>
 <body>
 
@@ -94,11 +94,18 @@
                 <button id="scanClose" class="scan-close">&times;</button>
             </div>
             <div class="scan-body">
-                <label class="scan-upload-label" id="scanUploadLabel">
-                    &#128206; Sube foto del ticket
-                    <input type="file" id="scanFileInput" accept="image/*" capture="environment" hidden>
-                </label>
+                <div class="scan-upload-options" id="scanUploadOptions">
+                    <label class="scan-upload-label" id="scanCameraLabel">
+                        &#128247; Hacer foto al ticket
+                        <input type="file" id="scanCameraInput" accept="image/*" capture="environment" hidden>
+                    </label>
+                    <label class="scan-upload-label scan-upload-gallery" id="scanGalleryLabel">
+                        &#128206; Elegir de galería
+                        <input type="file" id="scanGalleryInput" accept="image/*" hidden>
+                    </label>
+                </div>
                 <img id="scanPreview" class="scan-preview" style="display:none;" alt="Preview ticket">
+                <button id="scanRetryPhoto" class="btn-scan-retry" style="display:none;">&#128247; Otra foto</button>
                 <div id="scanProgress" class="scan-progress" style="display:none;">
                     <div class="scan-progress-bar" id="scanProgressBar"></div>
                     <span id="scanProgressText">Procesando...</span>
@@ -118,6 +125,6 @@
     </div>
 
     <!-- Firebase SDK -->
-    <script type="module" src="app.js?v=41"></script>
+    <script type="module" src="app.js?v=42"></script>
 </body>
 </html>
