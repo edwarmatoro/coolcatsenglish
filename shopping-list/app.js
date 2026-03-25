@@ -17,7 +17,6 @@ import {
     updateDoc,
     onSnapshot,
     doc,
-    setDoc,
     serverTimestamp,
     deleteField,
     arrayUnion,
@@ -229,7 +228,6 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
 const db          = getFirestore(firebaseApp);
 const itemsRef    = collection(db, "items");
-const statusDocRef = doc(db, "status", "shared");
 
 // ──────────────────────────────────────────────
 // DOM references
@@ -251,8 +249,6 @@ const frequentPanel   = document.getElementById("frequentPanel");
 const frequentChips   = document.getElementById("frequentChips");
 const autoCatHint     = document.getElementById("autoCatHint");
 const suggestions     = document.getElementById("suggestions");
-const inStoreBtn      = document.getElementById("inStoreBtn");
-const inStoreBanner   = document.getElementById("inStoreBanner");
 
 // Known products map: lowercase name → { id, text, checked }
 let knownProducts = new Map();
@@ -283,90 +279,7 @@ syncDot.className = "sync-dot";
 document.body.appendChild(syncDot);
 
 let unsubscribe = null;
-let unsubscribeStatus = null;
 let currentUser = null;   // set in onAuthStateChanged
-
-// ──────────────────────────────────────────────
-// "Estoy en el súper" — shared store status
-// ──────────────────────────────────────────────
-let _lastStatusData = {};
-let _statusTimerInterval = null;
-
-function startStatusListener() {
-    if (unsubscribeStatus) return;
-    unsubscribeStatus = onSnapshot(statusDocRef, (snap) => {
-        const data = snap.exists() ? snap.data() : {};
-        _lastStatusData = data;
-        updateInStoreBanner(data);
-        updateInStoreButton(data);
-
-        // Auto-expire after 2 hours
-        if (data.inStore && data.since && data.since.toDate) {
-            const elapsed = Date.now() - data.since.toDate().getTime();
-            if (elapsed > 2 * 60 * 60 * 1000) {
-                setDoc(statusDocRef, { inStore: false, uid: null, name: null, since: null });
-            }
-        }
-    });
-
-    // Refresh banner time every 60 s
-    _statusTimerInterval = setInterval(() => {
-        if (_lastStatusData.inStore) updateInStoreBanner(_lastStatusData);
-    }, 60000);
-}
-
-function stopStatusListener() {
-    if (unsubscribeStatus) { unsubscribeStatus(); unsubscribeStatus = null; }
-    if (_statusTimerInterval) { clearInterval(_statusTimerInterval); _statusTimerInterval = null; }
-}
-
-function updateInStoreBanner(data) {
-    if (!data.inStore || !data.uid) {
-        inStoreBanner.style.display = "none";
-        return;
-    }
-    // Only show banner if ANOTHER user is in the store
-    if (currentUser && data.uid === currentUser.uid) {
-        inStoreBanner.style.display = "none";
-        return;
-    }
-    const name = data.name || "Alguien";
-    let timeStr = "";
-    if (data.since && data.since.toDate) {
-        const diff = Math.round((Date.now() - data.since.toDate().getTime()) / 60000);
-        if (diff < 1) timeStr = " (ahora mismo)";
-        else if (diff === 1) timeStr = " (hace 1 min)";
-        else timeStr = ` (hace ${diff} min)`;
-    }
-    inStoreBanner.innerHTML = `🛒 <strong>${name}</strong> está en el súper${timeStr}`;
-    inStoreBanner.style.display = "flex";
-}
-
-function updateInStoreButton(data) {
-    if (!currentUser) return;
-    const iAmInStore = data.inStore && data.uid === currentUser.uid;
-    inStoreBtn.classList.toggle("active", iAmInStore);
-    inStoreBtn.innerHTML = iAmInStore ? "🛒 ¡Estoy comprando!" : "🛒 Estoy en el súper";
-}
-
-inStoreBtn.addEventListener("click", async () => {
-    if (!currentUser) return;
-    // Read current status from button state
-    const iAmInStore = inStoreBtn.classList.contains("active");
-    if (iAmInStore) {
-        // Turn off
-        await setDoc(statusDocRef, { inStore: false, uid: null, name: null, since: null });
-    } else {
-        // Turn on
-        const name = currentUser.displayName || currentUser.email.split("@")[0];
-        await setDoc(statusDocRef, {
-            inStore: true,
-            uid: currentUser.uid,
-            name: name,
-            since: serverTimestamp()
-        });
-    }
-});
 
 // ──────────────────────────────────────────────
 // Dark mode toggle
@@ -445,7 +358,6 @@ onAuthStateChanged(auth, (user) => {
         appContent.style.display = "block";
         authError.textContent    = "";
         startListening();
-        startStatusListener();
         preloadOCR(); // Pre-load Tesseract in background while user browses
     } else {
         currentUser = null;
@@ -456,7 +368,6 @@ onAuthStateChanged(auth, (user) => {
             signOut(auth);
         }
         if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-        stopStatusListener();
     }
 });
 
