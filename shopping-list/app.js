@@ -446,6 +446,7 @@ onAuthStateChanged(auth, (user) => {
         authError.textContent    = "";
         startListening();
         startStatusListener();
+        preloadOCR(); // Pre-load Tesseract in background while user browses
     } else {
         currentUser = null;
         appContent.style.display = "none";
@@ -1347,6 +1348,7 @@ const scanSummary     = document.getElementById("scanSummary");
 const scanCancel      = document.getElementById("scanCancel");
 
 let tesseractLoaded = false;
+let tesseractWorker = null;  // Pre-initialized worker
 let detectedProducts = [];
 
 scanTicketBtn.addEventListener("click", () => {
@@ -1391,8 +1393,10 @@ scanRetryPhoto.addEventListener("click", () => {
     resetScanUI();
 });
 
-// Load Tesseract.js lazily
-async function loadTesseract() {
+// ──────────────────────────────────────────────
+// Tesseract.js — pre-load script + warm up worker
+// ──────────────────────────────────────────────
+async function loadTesseractScript() {
     if (tesseractLoaded) return;
     return new Promise((resolve, reject) => {
         const script = document.createElement("script");
@@ -1400,6 +1404,72 @@ async function loadTesseract() {
         script.onload = () => { tesseractLoaded = true; resolve(); };
         script.onerror = reject;
         document.head.appendChild(script);
+    });
+}
+
+/**
+ * Pre-load OCR engine in background after login.
+ * Creates a Tesseract worker with Spanish lang ready to go.
+ * This way, when user scans, the heavy download+init is already done.
+ */
+async function preloadOCR() {
+    try {
+        await loadTesseractScript();
+        if (!tesseractWorker) {
+            console.log("⏳ Pre-loading Tesseract worker...");
+            tesseractWorker = await Tesseract.createWorker("spa", 1, {
+                logger: () => {} // silent during preload
+            });
+            console.log("✅ Tesseract worker ready");
+        }
+    } catch (err) {
+        console.warn("OCR preload failed (will retry on scan):", err);
+    }
+}
+
+/**
+ * Get a ready-to-use Tesseract worker.
+ * Returns the pre-loaded one if available, otherwise creates one on the fly.
+ */
+async function getOCRWorker(logger) {
+    if (tesseractWorker) return tesseractWorker;
+    // Fallback: load on demand
+    await loadTesseractScript();
+    tesseractWorker = await Tesseract.createWorker("spa", 1, { logger });
+    return tesseractWorker;
+}
+
+/**
+ * Resize image for faster OCR.
+ * Tickets don't need 4000px — 1500px width is plenty for text recognition.
+ * Returns a Blob of the resized image.
+ */
+function resizeImageForOCR(file, maxWidth = 1500) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            // If already small enough, use original
+            if (img.width <= maxWidth) {
+                resolve(file);
+                return;
+            }
+            const scale = maxWidth / img.width;
+            const canvas = document.createElement("canvas");
+            canvas.width = maxWidth;
+            canvas.height = Math.round(img.height * scale);
+
+            const ctx = canvas.getContext("2d");
+            // Use high quality downscaling
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob((blob) => {
+                console.log(`📐 Image resized: ${img.width}x${img.height} → ${canvas.width}x${canvas.height} (${(file.size/1024).toFixed(0)}KB → ${(blob.size/1024).toFixed(0)}KB)`);
+                resolve(blob);
+            }, "image/jpeg", 0.85);
+        };
+        img.src = URL.createObjectURL(file);
     });
 }
 
@@ -1416,35 +1486,43 @@ async function processTicketFile(file) {
     scanPreview.style.display = "block";
     scanUploadOptions.style.display = "none";
     scanProgress.style.display = "flex";
-    scanProgressText.textContent = "Cargando OCR...";
-    scanProgressBar.style.setProperty("--progress", "10%");
+
+    const workerReady = !!tesseractWorker;
+    scanProgressText.textContent = workerReady ? "Preparando imagen..." : "Cargando OCR...";
+    scanProgressBar.style.setProperty("--progress", workerReady ? "20%" : "5%");
 
     try {
-        await loadTesseract();
-        scanProgressText.textContent = "Leyendo ticket...";
-        scanProgressBar.style.setProperty("--progress", "30%");
+        const startTime = performance.now();
 
-        const result = await Tesseract.recognize(file, "spa", {
-            logger: (m) => {
+        // Resize image (runs in parallel with worker init if needed)
+        const [resizedImage, worker] = await Promise.all([
+            resizeImageForOCR(file),
+            getOCRWorker((m) => {
                 if (m.status === "recognizing text") {
                     const pct = Math.round(30 + m.progress * 60);
                     scanProgressBar.style.setProperty("--progress", pct + "%");
                     scanProgressText.textContent = "Leyendo... " + Math.round(m.progress * 100) + "%";
                 }
-            }
-        });
+            })
+        ]);
 
+        scanProgressText.textContent = "Leyendo ticket...";
+        scanProgressBar.style.setProperty("--progress", "30%");
+
+        const result = await worker.recognize(resizedImage);
+
+        const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
         scanProgressBar.style.setProperty("--progress", "95%");
         scanProgressText.textContent = "Analizando productos...";
 
         // Log raw OCR for debugging
-        console.log("──── OCR RAW TEXT ────\n" + result.data.text + "\n──────────────────────");
+        console.log(`──── OCR (${elapsed}s) ────\n${result.data.text}\n──────────────────────`);
 
         const products = parseTicket(result.data.text);
         scanProgressBar.style.setProperty("--progress", "100%");
 
         if (products.length === 0) {
-            scanProgressText.textContent = "No se detectaron productos. Intenta con otra foto.";
+            scanProgressText.textContent = `No se detectaron productos (${elapsed}s). Intenta con otra foto.`;
             scanRetryPhoto.style.display = "block";
             return;
         }
@@ -1457,6 +1535,8 @@ async function processTicketFile(file) {
 
     } catch (err) {
         console.error("OCR error:", err);
+        // If worker crashed, reset it for next attempt
+        tesseractWorker = null;
         scanProgressText.textContent = "Error al procesar. Intenta con otra foto.";
         scanRetryPhoto.style.display = "block";
     }
