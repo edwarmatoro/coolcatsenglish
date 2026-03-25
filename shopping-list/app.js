@@ -1440,103 +1440,34 @@ async function getOCRWorker(logger) {
 }
 
 /**
- * Pre-process image for optimal OCR on receipts/tickets.
- * 1) Resize to reasonable width (1500px max)
- * 2) Convert to grayscale
- * 3) Increase contrast (receipts are often faded)
- * 4) Apply adaptive threshold (binarization) — crisp black text on white
- * Returns a Blob ready for Tesseract.
+ * Resize image for faster OCR.
+ * Tickets don't need 4000px — 1500px width is plenty for text recognition.
+ * Returns a Blob of the resized image.
  */
-function preprocessImageForOCR(file, maxWidth = 1500) {
+function resizeImageForOCR(file, maxWidth = 1500) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-            const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-            const w = Math.round(img.width * scale);
-            const h = Math.round(img.height * scale);
-
+            // If already small enough, use original
+            if (img.width <= maxWidth) {
+                resolve(file);
+                return;
+            }
+            const scale = maxWidth / img.width;
             const canvas = document.createElement("canvas");
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext("2d", { willReadFrequently: true });
+            canvas.width = maxWidth;
+            canvas.height = Math.round(img.height * scale);
 
+            const ctx = canvas.getContext("2d");
+            // Use high quality downscaling
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = "high";
-            ctx.drawImage(img, 0, 0, w, h);
-
-            // Get pixel data
-            const imageData = ctx.getImageData(0, 0, w, h);
-            const data = imageData.data;
-
-            // Step 1: Convert to grayscale
-            for (let i = 0; i < data.length; i += 4) {
-                const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-                data[i] = data[i+1] = data[i+2] = gray;
-            }
-
-            // Step 2: Increase contrast (stretch histogram)
-            // Find min/max brightness
-            let minB = 255, maxB = 0;
-            for (let i = 0; i < data.length; i += 4) {
-                if (data[i] < minB) minB = data[i];
-                if (data[i] > maxB) maxB = data[i];
-            }
-            // Stretch to full 0-255 range with extra contrast
-            const range = maxB - minB || 1;
-            const contrastBoost = 1.3; // boost contrast a bit more
-            for (let i = 0; i < data.length; i += 4) {
-                let v = ((data[i] - minB) / range) * 255 * contrastBoost;
-                v = Math.max(0, Math.min(255, v));
-                data[i] = data[i+1] = data[i+2] = v;
-            }
-
-            // Step 3: Adaptive binarization (local threshold)
-            // Use a block-based approach: for each pixel, compare to local average
-            const blockSize = 15; // neighborhood size
-            const C = 10;         // constant subtracted from mean (sensitivity)
-            const grayValues = new Uint8Array(w * h);
-            for (let i = 0; i < grayValues.length; i++) {
-                grayValues[i] = data[i * 4];
-            }
-
-            // Build integral image for fast local mean computation
-            const integral = new Float64Array((w + 1) * (h + 1));
-            for (let y = 0; y < h; y++) {
-                let rowSum = 0;
-                for (let x = 0; x < w; x++) {
-                    rowSum += grayValues[y * w + x];
-                    integral[(y + 1) * (w + 1) + (x + 1)] =
-                        rowSum + integral[y * (w + 1) + (x + 1)];
-                }
-            }
-
-            const half = Math.floor(blockSize / 2);
-            for (let y = 0; y < h; y++) {
-                for (let x = 0; x < w; x++) {
-                    const x1 = Math.max(0, x - half);
-                    const y1 = Math.max(0, y - half);
-                    const x2 = Math.min(w - 1, x + half);
-                    const y2 = Math.min(h - 1, y + half);
-                    const count = (x2 - x1 + 1) * (y2 - y1 + 1);
-
-                    const sum = integral[(y2 + 1) * (w + 1) + (x2 + 1)]
-                              - integral[y1 * (w + 1) + (x2 + 1)]
-                              - integral[(y2 + 1) * (w + 1) + x1]
-                              + integral[y1 * (w + 1) + x1];
-
-                    const mean = sum / count;
-                    const idx = (y * w + x) * 4;
-                    const bw = grayValues[y * w + x] > (mean - C) ? 255 : 0;
-                    data[idx] = data[idx + 1] = data[idx + 2] = bw;
-                }
-            }
-
-            ctx.putImageData(imageData, 0, 0);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob((blob) => {
-                console.log(`📐 Pre-processed: ${img.width}×${img.height} → ${w}×${h} | grayscale + contrast + binarize | ${(file.size/1024).toFixed(0)}KB → ${(blob.size/1024).toFixed(0)}KB`);
+                console.log(`📐 Image resized: ${img.width}x${img.height} → ${canvas.width}x${canvas.height} (${(file.size/1024).toFixed(0)}KB → ${(blob.size/1024).toFixed(0)}KB)`);
                 resolve(blob);
-            }, "image/png"); // PNG for lossless binarized image
+            }, "image/jpeg", 0.85);
         };
         img.src = URL.createObjectURL(file);
     });
@@ -1563,9 +1494,9 @@ async function processTicketFile(file) {
     try {
         const startTime = performance.now();
 
-        // Pre-process image + get worker (in parallel)
-        const [processedImage, worker] = await Promise.all([
-            preprocessImageForOCR(file),
+        // Resize image (runs in parallel with worker init if needed)
+        const [resizedImage, worker] = await Promise.all([
+            resizeImageForOCR(file),
             getOCRWorker((m) => {
                 if (m.status === "recognizing text") {
                     const pct = Math.round(30 + m.progress * 60);
@@ -1578,7 +1509,7 @@ async function processTicketFile(file) {
         scanProgressText.textContent = "Leyendo ticket...";
         scanProgressBar.style.setProperty("--progress", "30%");
 
-        const result = await worker.recognize(processedImage);
+        const result = await worker.recognize(resizedImage);
 
         const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
         scanProgressBar.style.setProperty("--progress", "95%");
@@ -1758,8 +1689,6 @@ function extractProductName(line) {
  * Score > 70: very likely a product (exact/close match)
  * Score 40-70: probable product (partial match or reasonable text)
  * Score < 30: probably noise
- *
- * Uses: exact match, substring, n-gram word overlap, Levenshtein, heuristics
  */
 function scoreCandidate(candidate) {
     const lower = candidate.toLowerCase().trim();
@@ -1774,90 +1703,58 @@ function scoreCandidate(candidate) {
         if (key === lower) return { name: val.text, score: 95 };
     }
 
-    // 3) Substring matching + N-gram word matching against bank & known
+    // 3) Product bank contains/is contained by candidate
     let bestMatch = null;
     let bestMatchScore = 0;
 
-    const candidateWords = lower.split(/\s+/).filter(w => w.length >= 2);
-
-    // Helper: compute n-gram word overlap score between candidate and a reference
-    function ngramWordScore(refLower, refOriginal) {
-        const refWords = refLower.split(/\s+/).filter(w => w.length >= 2);
-        if (refWords.length === 0 || candidateWords.length === 0) return 0;
-
-        // Count how many candidate words match (or fuzzy-match) reference words
-        let matchedWords = 0;
-        for (const cw of candidateWords) {
-            for (const rw of refWords) {
-                // Exact word match
-                if (cw === rw) { matchedWords++; break; }
-                // One starts with the other (abbreviation)
-                if ((cw.length >= 3 && rw.startsWith(cw)) || (rw.length >= 3 && cw.startsWith(rw))) {
-                    matchedWords += 0.8; break;
-                }
-                // Fuzzy word match (1-char difference)
-                if (cw.length >= 4 && rw.length >= 4 && Math.abs(cw.length - rw.length) <= 1) {
-                    if (levenshtein(cw, rw) <= 1) { matchedWords += 0.7; break; }
-                }
-            }
-        }
-
-        // Score: proportion of matched words (weighted by both sides)
-        const coverageCandidate = matchedWords / candidateWords.length;
-        const coverageRef = matchedWords / refWords.length;
-        // Geometric mean gives balanced score
-        const overlap = Math.sqrt(coverageCandidate * coverageRef);
-        return overlap;
-    }
-
-    // Check against product bank
     for (const bankProduct of PRODUCT_BANK) {
         const bankLower = bankProduct.toLowerCase();
 
-        // Substring: candidate contains bank product name
+        // Candidate contains bank product name
         if (lower.includes(bankLower) && bankLower.length >= 4) {
             const overlap = bankLower.length / lower.length;
-            const s = 60 + Math.round(overlap * 30);
-            if (s > bestMatchScore) { bestMatch = bankProduct; bestMatchScore = s; }
+            const s = 60 + Math.round(overlap * 30); // 60-90
+            if (s > bestMatchScore) {
+                bestMatch = bankProduct;
+                bestMatchScore = s;
+            }
         }
-        // Substring: bank product contains candidate
+        // Bank product contains candidate
         if (bankLower.includes(lower) && lower.length >= 4) {
             const overlap = lower.length / bankLower.length;
-            const s = 55 + Math.round(overlap * 30);
-            if (s > bestMatchScore) { bestMatch = bankProduct; bestMatchScore = s; }
-        }
-        // N-gram word overlap
-        const ng = ngramWordScore(bankLower, bankProduct);
-        if (ng >= 0.5) {
-            const s = 45 + Math.round(ng * 45); // 45-90
-            if (s > bestMatchScore) { bestMatch = bankProduct; bestMatchScore = s; }
+            const s = 55 + Math.round(overlap * 30); // 55-85
+            if (s > bestMatchScore) {
+                bestMatch = bankProduct;
+                bestMatchScore = s;
+            }
         }
     }
 
-    // Check against Firestore known products
+    // 4) Check known Firestore products the same way
     for (const [key, val] of knownProducts) {
         if (lower.includes(key) && key.length >= 4) {
             const overlap = key.length / lower.length;
             const s = 65 + Math.round(overlap * 30);
-            if (s > bestMatchScore) { bestMatch = val.text; bestMatchScore = s; }
+            if (s > bestMatchScore) {
+                bestMatch = val.text;
+                bestMatchScore = s;
+            }
         }
         if (key.includes(lower) && lower.length >= 4) {
             const overlap = lower.length / key.length;
             const s = 60 + Math.round(overlap * 30);
-            if (s > bestMatchScore) { bestMatch = val.text; bestMatchScore = s; }
-        }
-        const ng = ngramWordScore(key, val.text);
-        if (ng >= 0.5) {
-            const s = 50 + Math.round(ng * 40);
-            if (s > bestMatchScore) { bestMatch = val.text; bestMatchScore = s; }
+            if (s > bestMatchScore) {
+                bestMatch = val.text;
+                bestMatchScore = s;
+            }
         }
     }
 
-    if (bestMatch && bestMatchScore >= 45) {
+    if (bestMatch && bestMatchScore >= 50) {
         return { name: bestMatch, score: bestMatchScore };
     }
 
-    // 4) Full-string Fuzzy match (Levenshtein) against bank
+    // 5) Fuzzy match (Levenshtein) against bank
     if (lower.length >= 4) {
         let closestDist = Infinity;
         let closestName = null;
@@ -1872,12 +1769,12 @@ function scoreCandidate(candidate) {
             }
         }
         if (closestName) {
-            const s = 70 - (closestDist * 15);
+            const s = 70 - (closestDist * 15); // 70 for dist=0, 55 for dist=1, etc.
             return { name: closestName, score: Math.max(40, s) };
         }
     }
 
-    // 5) Fuzzy-check Firestore products
+    // 6) Also fuzzy-check Firestore products
     if (lower.length >= 4) {
         let closestDist = Infinity;
         let closestName = null;
@@ -1896,13 +1793,14 @@ function scoreCandidate(candidate) {
         }
     }
 
-    // 6) No match found — apply heuristic score
-    let heuristicScore = 25;
+    // 7) No match found — apply heuristic score
+    //    Check if it "looks like" a product name
+    let heuristicScore = 25; // base: low confidence
 
     // Bonus: it's in AUTO_CATEGORY dictionary
     if (guessCategory(candidate) !== "Otros") heuristicScore += 25;
 
-    // Bonus: contains mostly letters
+    // Bonus: contains mostly letters (not numbers/symbols)
     const letterRatio = (candidate.match(/[a-záéíóúñA-ZÁÉÍÓÚÑ]/g) || []).length / candidate.length;
     if (letterRatio > 0.8) heuristicScore += 10;
     if (letterRatio < 0.5) heuristicScore -= 15;
@@ -1914,7 +1812,7 @@ function scoreCandidate(candidate) {
     if (/\d{3,}/.test(candidate)) heuristicScore -= 20;
     if (/[A-Z]{5,}/.test(candidate) && !/[aeiouáéíóú]/i.test(candidate)) heuristicScore -= 20;
 
-    // Penalty: single word very short
+    // Penalty: single word that's very short
     if (!candidate.includes(" ") && candidate.length < 5) heuristicScore -= 10;
 
     return { name: candidate, score: Math.max(0, Math.min(100, heuristicScore)) };
@@ -1940,167 +1838,43 @@ function levenshtein(a, b) {
 
 // ──────────────────────────────────────────────
 // Expand common Spanish supermarket abbreviations
-// Covers: Mercadona, Lidl, Carrefour, DIA, Aldi, Eroski, Consum, BonPreu
 // ──────────────────────────────────────────────
 function expandAbbreviations(name) {
     const abbrevs = [
-        // ── Water / Beverages ──
-        [/\bAgua\s+Min\.?\b/i,              "Agua Mineral"],
-        [/\bAgua\s+Mn\b/i,                  "Agua Mineral"],
-        [/\bZumo\s+Nar\.?\b/i,              "Zumo Naranja"],
-        [/\bRefr\.?\b/i,                     "Refresco"],
-        [/\bCerv\.?\b/i,                     "Cerveza"],
-
-        // ── Dairy ──
-        [/\bLch\.?\b/i,                      "Leche"],
-        [/\bL\.?\s*Entera\b/i,              "Leche Entera"],
-        [/\bL\.?\s*Desnat\.?\b/i,           "Leche Desnatada"],
-        [/\bL\.?\s*Semi\.?\b/i,             "Leche Semidesnatada"],
-        [/\bL\.?\s*S\/Lact\.?\b/i,          "Leche Sin Lactosa"],
-        [/\bEntr\.?\b/i,                     "Entera"],
-        [/\bDesn\.?\b/i,                     "Desnatada"],
-        [/\bSemid\.?\b/i,                   "Semidesnatada"],
-        [/\bS\/Lact\.?\b/i,                 "Sin Lactosa"],
-        [/\bYog\.?\b/i,                      "Yogur"],
-        [/\bYog\.?\s*Nat\.?\b/i,            "Yogur Natural"],
-        [/\bYog\.?\s*Gr\.?\b/i,             "Yogur Griego"],
-        [/\bMant\.?\b/i,                     "Mantequilla"],
-        [/\bMarg\.?\b/i,                     "Margarina"],
-        [/\bQ\.?\s*Rall\.?\b/i,             "Queso Rallado"],
-        [/\bQ\.?\s*Fresc\.?\b/i,            "Queso Fresco"],
-        [/\bQues\.?\b/i,                     "Queso"],
-        [/\bMozz\.?\b/i,                     "Mozzarella"],
-        [/\bParm\.?\b/i,                     "Parmesano"],
-
-        // ── Meat ──
-        [/\bPech\.?\s+P(ol|av)\.?\b/i,      "Pechuga De Pavo"],
-        [/\bPech\.?\s+Poll\.?\b/i,          "Pechuga De Pollo"],
-        [/\bPechuga\s+Pr\s*Me\b/i,          "Pechuga De Pavo Al Horno"],
-        [/\bPechuga\s+Pavo\b/i,             "Pechuga De Pavo"],
-        [/\bCarn\.?\s*Pic\.?\b/i,           "Carne Picada"],
-        [/\bHamburg\.?\b/i,                  "Hamburguesa"],
-        [/\bSalch\.?\b/i,                    "Salchicha"],
-        [/\bJam[oó]n?\s*Serr?\.?\b/i,       "Jamón Serrano"],
-        [/\bJam[oó]n?\s*Coc\.?\b/i,         "Jamón Cocido"],
-        [/\bJam[oó]n?\s*York\.?\b/i,        "Jamón York"],
-        [/\bJam[oó]n?\s*S\b/i,              "Jamón Serrano"],
-        [/\bJam[oó]n?\s*C\b/i,              "Jamón Cocido"],
-        [/\bChori?z?\.?\b/i,                "Chorizo"],
-        [/\bLong\.?\b/i,                     "Longaniza"],
-
-        // ── Fish ──
-        [/\bSalm\.?\b/i,                     "Salmón"],
-        [/\bMerl\.?\b/i,                     "Merluza"],
-        [/\bBacal\.?\b/i,                    "Bacalao"],
-        [/\bLangost\.?\b/i,                  "Langostino"],
-        [/\bGamb\.?\b/i,                     "Gamba"],
-
-        // ── Fruit & Veg ──
-        [/\bPlat\.?\b/i,                     "Plátano"],
-        [/\bManz\.?\b/i,                     "Manzana"],
-        [/\bNaranj\.?\b/i,                   "Naranja"],
-        [/\bTom\.?\s*Frit\.?\b/i,           "Tomate Frito"],
-        [/\bTom\.?\s*Trit\.?\b/i,           "Tomate Triturado"],
-        [/\bTom\.?\s*Nat\.?\b/i,            "Tomate Natural"],
-        [/\bTom\.?\b/i,                      "Tomate"],
-        [/\bCeb\.?\b/i,                      "Cebolla"],
-        [/\bLech\.?\b/i,                     "Lechuga"],
-        [/\bZanah\.?\b/i,                    "Zanahoria"],
-        [/\bPat\.?\b(?!\s*(frit|chip))/i,    "Patata"],
-        [/\bPim\.?\b/i,                      "Pimiento"],
-        [/\bCalab\.?\b/i,                    "Calabacín"],
-        [/\bChampi\.?\b/i,                   "Champiñón"],
-        [/\bEsp[aá]rr\.?\b/i,               "Espárrago"],
-        [/\bBr[oó]c\.?\b/i,                 "Brócoli"],
-        [/\bAguac\.?\b/i,                    "Aguacate"],
-
-        // ── Bread & Cereals ──
-        [/\bPan\s+Mold\.?\b/i,              "Pan De Molde"],
-        [/\bPan\s+Int\.?\b/i,               "Pan Integral"],
-        [/\bPan\s+Rall\.?\b/i,              "Pan Rallado"],
-        [/\bGall\.?\b/i,                     "Galletas"],
-        [/\bMagd\.?\b/i,                     "Magdalenas"],
-        [/\bMacar\.?\b/i,                    "Macarrones"],
-        [/\bEspag\.?\b/i,                    "Espagueti"],
-        [/\bFid\.?\b/i,                      "Fideos"],
-
-        // ── Cleaning & Hygiene ──
-        [/\bB\.\s*Basura\b/i,               "Bolsas De Basura"],
-        [/\bB\.basura\b/i,                   "Bolsas De Basura"],
-        [/\bBols\.?\s*Bas\.?\b/i,           "Bolsas De Basura"],
-        [/\bPap\.?\s*Hig\.?\b/i,            "Papel Higiénico"],
-        [/\bP\.?\s*Hig[ié]n\.?\b/i,         "Papel Higiénico"],
-        [/\bPap\.?\s*Coc\.?\b/i,            "Papel De Cocina"],
-        [/\bP\.?\s*Cocina\b/i,              "Papel De Cocina"],
-        [/\bP\.?\s*Alum\.?\b/i,             "Papel De Aluminio"],
-        [/\bDet\.?\b/i,                      "Detergente"],
-        [/\bSuav\.?\b/i,                     "Suavizante"],
-        [/\bLavav\.?\b/i,                    "Lavavajillas"],
-        [/\bFregasl?\.?\b/i,                "Fregasuelos"],
-        [/\bLimpi?\.?\b/i,                   "Limpiador"],
-        [/\bAmbi\.?\b/i,                     "Ambientador"],
-        [/\bDiscos\s+Act\.?\b/i,            "Discos Activos"],
-        [/\bDiscos\s+A\b/i,                 "Discos Activos"],
-        [/\bExt\.?\s*C\.?\s*F[aá]cil\b/i,  "Extra Cierre Fácil"],
-        [/\bServ\.?\b/i,                     "Servilletas"],
-        [/\bChamp[uú]\.?\b/i,               "Champú"],
-        [/\bDesod\.?\b/i,                    "Desodorante"],
-        [/\bP\.?\s*Dientes\b/i,             "Pasta De Dientes"],
-        [/\bCrema\s*Hid\.?\b/i,             "Crema Hidratante"],
-
-        // ── Pantry ──
-        [/\bAceit\.?\s*Oliv\.?\b/i,         "Aceite De Oliva"],
-        [/\bAceit\.?\s*Gir\.?\b/i,          "Aceite De Girasol"],
-        [/\bAceit\.?\s*/i,                   "Aceite "],
-        [/\bOliv\.?\s*/i,                    "Oliva "],
-        [/\bVirg\.?\s*/i,                    "Virgen "],
-        [/\bExtra\.?\s*/i,                   "Extra "],
-        [/\bMayones\.?\b/i,                  "Mayonesa"],
-        [/\bMermel\.?\b/i,                   "Mermelada"],
-        [/\bCap\.\s*/i,                      "Cápsulas "],
-        [/\bC[aá]ps\.?\s*Nesp\.?\b/i,       "Cápsulas Nespresso"],
-        [/\bChoco[\.\-\s]?Leche\b/i,        "Chocolate Con Leche"],
-        [/\bChoco\s+Alm\.?\b/i,             "Chocolate Almendra"],
-        [/\bChoco\.?\b/i,                    "Chocolate"],
-        [/\bColac\.?\b/i,                    "Cola Cao"],
-        [/\bNocil\.?\b/i,                    "Nocilla"],
-        [/\bNutel\.?\b/i,                    "Nutella"],
-        [/\bAt[uú]n\s*Lat\.?\b/i,           "Atún En Lata"],
-        [/\bLent\.?\b/i,                     "Lentejas"],
-        [/\bGarb\.?\b/i,                     "Garbanzos"],
-        [/\bAlub\.?\b/i,                     "Alubias"],
-        [/\bAceit\.?\b/i,                    "Aceitunas"],
-        [/\bPat\.?\s*Frit\.?\b/i,           "Patatas Fritas"],
-        [/\bPalom\.?\b/i,                    "Palomitas"],
-
-        // ── Frozen ──
-        [/\bCroq\.?\b/i,                     "Croquetas"],
-        [/\bEmpanad\.?\b/i,                  "Empanadillas"],
-        [/\bNugg\.?\b/i,                     "Nuggets"],
-        [/\bVerd\.?\s*Cong\.?\b/i,          "Verdura Congelada"],
-        [/\bPat\.?\s*Cong\.?\b/i,           "Patatas Congeladas"],
-
-        // ── Coffee abbreviations (Mercadona-style) ──
-        [/\bC\.\s+/i,                        "Café "],
-        [/\bC,\s+/i,                         "Café "],
-        [/\b1£,\s*/i,                        "Café "],
-        [/\bCaf[eé]?\.\s*/i,                "Café "],
-
-        // ── Mercadona specific ──
-        [/\bMigas\s+De\s+Co\s*Me\b/i,       "Migas De Coliflor"],
-        [/\bMigas\s+De\s+Co\b/i,            "Migas De Coliflor"],
-        [/\bPisto\s+De\s+Ve\b/i,            "Pisto De Verduras"],
-        [/\bAlum\.?\b/i,                     "Aluminio"],
-        [/\bAlu\b/i,                         "Aluminio"],
-        [/\bDob\.\s*/i,                      "Doble "],
-
-        // ── Size/type suffixes to strip ──
-        [/\s+\d+\s*(ml|cl|l|g|kg|ud|un|pk|pack)\b/i, ""],  // "500ml", "1L", "6pk"
-        [/\s+\d+x\d+\s*(ml|cl|l|g|kg)?\b/i, ""],           // "6x200ml"
-
-        // ── OCR garbage ──
-        [/\bAldo\s+E\s+Ne\b/i,              ""],
-        [/\bPuro\s*[—–\-]+\s*,?\s*$/i,      "Puro"],
+        [/\bAgua Min\b/i,              "Agua Mineral"],
+        [/\bChoco[\.\-\s]?Leche\b/i,   "Chocolate Con Leche"],
+        [/\bChoco\s+Almendra\b/i,       "Chocolate Almendra"],
+        [/\bCap\.\s*/i,                 "Cápsulas "],
+        [/\bC\.\s+/i,                   "Café "],
+        [/\bC,\s+/i,                    "Café "],
+        [/\b1£,\s*/i,                   "Café "],
+        [/\bB\.\s*Basura\b/i,           "Bolsas De Basura"],
+        [/\bB\.basura\b/i,              "Bolsas De Basura"],
+        [/\bExt\.?\s*C\.?\s*F[aá]cil\b/i, "Extra Cierre Fácil"],
+        [/\bAlum\b/i,                   "Aluminio"],
+        [/\bAlu\b/i,                    "Aluminio"],
+        [/\bDob\.\s*/i,                 "Doble "],
+        [/\bPechuga\s+Pr\s*Me\b/i,      "Pechuga De Pavo Al Horno"],
+        [/\bPechuga\s+Pavo\b/i,         "Pechuga De Pavo"],
+        [/\bMigas\s+De\s+Co\s*Me\b/i,   "Migas De Coliflor"],
+        [/\bMigas\s+De\s+Co\b/i,        "Migas De Coliflor"],
+        [/\bPisto\s+De\s+Ve\b/i,        "Pisto De Verduras"],
+        [/\bDiscos\s+Act\b/i,           "Discos Activos"],
+        [/\bDiscos\s+A\b/i,             "Discos Activos"],
+        [/\bLch\b/i,                    "Leche"],
+        [/\bEntr\b/i,                   "Entera"],
+        [/\bDesn\b/i,                   "Desnatada"],
+        [/\bSemid\b/i,                  "Semidesnatada"],
+        [/\bYog\b/i,                    "Yogur"],
+        [/\bMant\b/i,                   "Mantequilla"],
+        [/\bJam[oó]n?\s*S\b/i,          "Jamón Serrano"],
+        [/\bJam[oó]n?\s*C\b/i,          "Jamón Cocido"],
+        [/\bAceit\.\s*/i,               "Aceite "],
+        [/\bOliv\.\s*/i,                "Oliva "],
+        [/\bVirg\.\s*/i,                "Virgen "],
+        [/\bExtra\.\s*/i,               "Extra "],
+        [/\bAldo\s+E\s+Ne\b/i,          ""],
+        [/\bPuro\s*[—–\-]+\s*,?\s*$/i,  "Puro"],
     ];
 
     for (const [pattern, replacement] of abbrevs) {
