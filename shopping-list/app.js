@@ -868,6 +868,17 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
     noteRow.append(noteBtn, noteDisplay, noteInput);
     textWrapper.appendChild(noteRow);
 
+    // Show last purchase date
+    if (purchaseHistory && purchaseHistory.length > 0) {
+        const last = purchaseHistory[purchaseHistory.length - 1];
+        const lastDate = last.toDate ? last.toDate() : new Date(last);
+        const dateStr = lastDate.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
+        const dateSpan = document.createElement("span");
+        dateSpan.className = "item-checked-date";
+        dateSpan.textContent = "🛒 " + dateStr;
+        textWrapper.appendChild(dateSpan);
+    }
+
     const deleteBtn = document.createElement("button");
     deleteBtn.className   = "btn-delete";
     deleteBtn.textContent = "x";
