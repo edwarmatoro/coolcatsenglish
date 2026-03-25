@@ -360,6 +360,7 @@ body {
     align-items: center;
     margin-bottom: 0.75rem;
     min-height: 28px;
+    justify-content: flex-start;
 }
 
 .item-count {
@@ -774,6 +775,21 @@ body {
     font-weight: 600;
 }
 
+.frequent-detail {
+    font-size: 0.68rem;
+    color: var(--text-light);
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.frequent-panel-title {
+    width: 100%;
+    font-size: 0.82rem;
+    color: var(--text-light);
+    margin-bottom: 0.3rem;
+    font-style: italic;
+}
+
 .frequent-empty {
     font-size: 0.85rem;
     color: var(--text-light);
@@ -1086,6 +1102,10 @@ body {
     color: #16a34a;
 }
 
+.scan-summary-title.match {
+    color: var(--primary);
+}
+
 .scan-summary-title.dup {
     color: #d97706;
 }
@@ -1105,6 +1125,11 @@ body {
 
 .scan-summary-list.new li {
     background: rgba(22, 163, 74, 0.08);
+    color: var(--text);
+}
+
+.scan-summary-list.match li {
+    background: rgba(8, 145, 178, 0.08);
     color: var(--text);
 }
 

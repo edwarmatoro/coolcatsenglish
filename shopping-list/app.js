@@ -140,6 +140,59 @@ const AUTO_CATEGORY = {
     ]
 };
 
+// ──────────────────────────────────────────────
+// Static product bank — common supermarket products
+// Used for: suggestions, ticket matching, auto-complete
+// ──────────────────────────────────────────────
+const PRODUCT_BANK = [
+    // Fruta y Verdura
+    "Acelga","Aguacate","Ajo","Apio","Berenjena","Brócoli","Calabacín","Calabaza",
+    "Cebolla","Cebolleta","Champiñón","Clementina","Col","Coliflor","Espárrago",
+    "Espinaca","Frambuesa","Fresa","Judía Verde","Kiwi","Lechuga","Limón",
+    "Mandarina","Mango","Manzana","Melocotón","Melón","Naranja","Patata","Pepino",
+    "Pera","Perejil","Pimiento","Piña","Plátano","Puerro","Remolacha","Rúcula",
+    "Sandía","Seta","Tomate","Uva","Zanahoria","Arándano","Boniato","Canónigos",
+    "Jengibre","Lima","Albahaca","Cilantro","Hierbabuena","Romero","Tomillo","Menta",
+    "Pisto de Verduras","Menestra","Ensalada","Migas de Coliflor",
+    // Lácteos y Huevos
+    "Leche","Leche Entera","Leche Semidesnatada","Leche Desnatada","Leche Sin Lactosa",
+    "Yogur","Yogur Natural","Yogur Griego","Queso","Queso Fresco","Queso Rallado",
+    "Queso Manchego","Queso de Cabra","Mozzarella","Parmesano","Mantequilla","Nata",
+    "Natillas","Flan","Huevos","Batido","Helado","Kéfir","Requesón",
+    // Carne y Pescado
+    "Pollo","Pechuga de Pollo","Muslo de Pollo","Ternera","Cerdo","Cordero","Pavo",
+    "Pechuga de Pavo","Hamburguesa","Carne Picada","Salchicha","Chorizo","Jamón Serrano",
+    "Jamón Cocido","Jamón York","Lomo","Costilla","Chuleta","Filete","Bacon","Panceta",
+    "Fuet","Salchichón","Mortadela","Salmón","Atún","Merluza","Bacalao","Sardina",
+    "Gamba","Langostino","Mejillón","Calamar","Pulpo","Sepia","Lubina","Dorada","Trucha",
+    // Pan y Cereales
+    "Pan","Pan de Molde","Pan Integral","Baguette","Tostadas","Cereal","Cereales",
+    "Muesli","Granola","Avena","Arroz","Pasta","Espagueti","Macarrones","Fideos",
+    "Lasaña","Cuscús","Quinoa","Harina","Galletas","Magdalenas","Croissant","Bizcocho",
+    // Limpieza e Higiene
+    "Jabón","Champú","Gel de Ducha","Desodorante","Pasta de Dientes","Papel Higiénico",
+    "Papel de Cocina","Servilletas","Toallitas","Lejía","Lavavajillas","Detergente",
+    "Suavizante","Limpiador","Fregasuelos","Amoniaco","Bolsas de Basura","Estropajo",
+    "Bayeta","Esponja","Discos Activos","Film Transparente","Papel de Aluminio",
+    "Ambientador","Crema Hidratante","Cuchillas","Arena",
+    // Despensa
+    "Aceite de Oliva","Aceite de Girasol","Vinagre","Sal","Azúcar","Pimienta",
+    "Orégano","Pimentón","Comino","Canela","Tomate Frito","Tomate Triturado",
+    "Mayonesa","Kétchup","Mostaza","Miel","Mermelada","Café","Cápsulas Nespresso",
+    "Té","Infusiones","Chocolate","Chocolate Puro","Cola Cao","Nocilla","Nutella",
+    "Atún en Lata","Lentejas","Garbanzos","Alubias","Aceitunas","Maíz","Agua","Zumo",
+    "Refresco","Cerveza","Vino","Caldo","Sopa","Leche Condensada","Almendras",
+    "Nueces","Cacahuetes","Patatas Fritas","Palomitas",
+    // Congelados
+    "Pizza","Croquetas","Empanadillas","Nuggets","San Jacobo","Guisantes Congelados",
+    "Verdura Congelada","Patatas Congeladas","Helado"
+];
+
+// Build lowercase set for fast lookup
+const _productBankLower = new Set(PRODUCT_BANK.map(p => p.toLowerCase()));
+// Build lookup map: lowercase → proper name
+const _productBankMap = new Map(PRODUCT_BANK.map(p => [p.toLowerCase(), p]));
+
 // Build lookup: normalized word → category
 const _categoryLookup = {};
 for (const [cat, words] of Object.entries(AUTO_CATEGORY)) {
@@ -192,7 +245,6 @@ const itemInput       = document.getElementById("itemInput");
 const categorySelect  = document.getElementById("categorySelect");
 const shoppingList    = document.getElementById("shoppingList");
 const emptyState      = document.getElementById("emptyState");
-const itemCount       = document.getElementById("itemCount");
 const filterPending   = document.getElementById("filterPending");
 const showFrequentBtn = document.getElementById("showFrequent");
 const frequentPanel   = document.getElementById("frequentPanel");
@@ -505,17 +557,22 @@ function renderRepeatChips() {
     );
 
     // Gather checked products (already bought) that are NOT pending
-    // These are candidates for "buy again"
     const candidates = [];
     lastDocs.forEach(d => {
         const data = d.data();
         const name = (data.text || "").trim();
         const lower = name.toLowerCase();
         if (!name) return;
-        if (pendingNames.has(lower)) return;           // already pending, skip
-        if (!data.checked) return;                      // unchecked but somehow not pending? skip
+        if (pendingNames.has(lower)) return;
+        if (!data.checked) return;
         const count = (data.purchaseHistory && data.purchaseHistory.length) || 0;
-        candidates.push({ text: name, count, id: d.id });
+        // Get last purchase date
+        let lastDate = null;
+        if (data.purchaseHistory && data.purchaseHistory.length > 0) {
+            const last = data.purchaseHistory[data.purchaseHistory.length - 1];
+            lastDate = last.toDate ? last.toDate() : new Date(last);
+        }
+        candidates.push({ text: name, count, id: d.id, lastDate });
     });
 
     // Sort: most purchased first, then alphabetical
@@ -529,15 +586,20 @@ function renderRepeatChips() {
         return;
     }
 
+    // Panel title
+    const panelTitle = document.createElement("p");
+    panelTitle.className = "frequent-panel-title";
+    panelTitle.textContent = "Toca un producto para volver a ponerlo como pendiente:";
+    frequentChips.appendChild(panelTitle);
+
     // "Add all" button
     const addAllBtn = document.createElement("button");
     addAllBtn.className = "frequent-chip frequent-chip-all";
-    addAllBtn.textContent = "➕ Añadir todos";
+    addAllBtn.textContent = `🔄 Poner todos pendientes (${candidates.length})`;
     addAllBtn.addEventListener("click", async () => {
         addAllBtn.disabled = true;
         addAllBtn.textContent = "Añadiendo...";
         for (const item of candidates) {
-            // Uncheck them so they become pending again
             await updateDoc(doc(db, "items", item.id), { checked: false });
         }
         frequentPanel.style.display = "none";
@@ -548,21 +610,32 @@ function renderRepeatChips() {
     candidates.forEach(item => {
         const chip = document.createElement("button");
         chip.className = "frequent-chip";
-        if (item.count > 1) {
-            chip.innerHTML = `${item.text} <span class="frequent-count">×${item.count}</span>`;
+
+        // Build descriptive label
+        let label = item.text;
+        const extras = [];
+        if (item.count > 1) extras.push(`${item.count} compras`);
+        if (item.lastDate) {
+            const daysDiff = Math.round((Date.now() - item.lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysDiff === 0) extras.push("hoy");
+            else if (daysDiff === 1) extras.push("ayer");
+            else if (daysDiff < 7) extras.push(`hace ${daysDiff} días`);
+            else if (daysDiff < 30) extras.push(`hace ${Math.round(daysDiff / 7)} sem.`);
+            else extras.push(`hace ${Math.round(daysDiff / 30)} mes${Math.round(daysDiff / 30) > 1 ? "es" : ""}`);
+        }
+        if (extras.length > 0) {
+            chip.innerHTML = `${label} <span class="frequent-detail">${extras.join(" · ")}</span>`;
         } else {
-            chip.textContent = item.text;
+            chip.textContent = label;
         }
         chip.title = `Volver a poner "${item.text}" como pendiente`;
 
         chip.addEventListener("click", async () => {
-            // Uncheck → becomes pending again
             await updateDoc(doc(db, "items", item.id), { checked: false });
             chip.classList.add("just-added");
             chip.disabled = true;
             setTimeout(() => {
                 chip.remove();
-                // If no more chips, close panel
                 if (frequentChips.querySelectorAll(".frequent-chip:not(.frequent-chip-all)").length === 0) {
                     frequentPanel.style.display = "none";
                     showFrequentBtn.classList.remove("active");
@@ -591,14 +664,11 @@ function renderList(docs) {
         shoppingList.querySelectorAll(".category-group").forEach(el => el.remove());
         emptyState.style.display = "block";
         emptyState.textContent = "La lista está vacía. ¡Añade algo! 🧺";
-        itemCount.textContent = "";
         renderedItems.clear();
         return;
     }
 
-    const total   = docs.length;
-    const checked = docs.filter(d => d.data().checked).length;
-    itemCount.textContent = checked + "/" + total + " marcados";
+    // No counter — removed by design
 
     // Apply filter
     const visibleDocs = showOnlyPending ? docs.filter(d => !d.data().checked) : docs;
@@ -774,35 +844,46 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
     label.className   = "item-label";
     label.textContent = text;
 
-    // Long-press to edit name
+    // Long-press to edit name, tap to toggle — scroll-safe
     let longPressTimer = null;
     let didLongPress = false;
+    let didMove = false;
+    let labelTouchStartY = 0;
 
-    const startLongPress = (e) => {
+    label.addEventListener("touchstart", (e) => {
         didLongPress = false;
+        didMove = false;
+        labelTouchStartY = e.touches[0].clientY;
         longPressTimer = setTimeout(() => {
             didLongPress = true;
             e.preventDefault();
             startEditName(id, text, label, textWrapper);
         }, 500);
-    };
+    }, { passive: false });
 
-    const cancelLongPress = () => {
-        clearTimeout(longPressTimer);
-    };
+    label.addEventListener("touchmove", (e) => {
+        // If finger moved more than 10px vertically, it's a scroll — cancel everything
+        const dy = Math.abs(e.touches[0].clientY - labelTouchStartY);
+        if (dy > 10) {
+            didMove = true;
+            clearTimeout(longPressTimer);
+        }
+    }, { passive: true });
 
-    label.addEventListener("touchstart", startLongPress, { passive: false });
     label.addEventListener("touchend", (e) => {
-        cancelLongPress();
+        clearTimeout(longPressTimer);
+        // Don't toggle if user scrolled or long-pressed
         if (didLongPress) { e.preventDefault(); return; }
+        if (didMove) return;
         checkbox.checked = !checkbox.checked;
         toggleItem(id, checkbox.checked);
     });
-    label.addEventListener("touchmove", cancelLongPress);
 
     // Desktop: click to toggle, dblclick to edit
     label.addEventListener("click", (e) => {
-        if (didLongPress) return;
+        // Only for non-touch (mouse) — touch is handled above
+        if (didLongPress || didMove) return;
+        if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
         checkbox.checked = !checkbox.checked;
         toggleItem(id, checkbox.checked);
     });
@@ -875,18 +956,6 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
     noteRow.append(noteBtn, noteDisplay, noteInput);
     textWrapper.appendChild(noteRow);
 
-    if (purchaseHistory && purchaseHistory.length > 0) {
-        const dates = purchaseHistory.map(ts => {
-            const d = ts.toDate ? ts.toDate() : new Date(ts);
-            return d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
-        });
-        const uniqueDates = [...new Set(dates)];
-        const dateSpan = document.createElement("span");
-        dateSpan.className = "item-checked-date";
-        dateSpan.textContent = "🛒 Compra: " + uniqueDates.join(", ");
-        textWrapper.appendChild(dateSpan);
-    }
-
     const deleteBtn = document.createElement("button");
     deleteBtn.className   = "btn-delete";
     deleteBtn.textContent = "x";
@@ -908,7 +977,7 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
     li.append(checkbox, textWrapper, deleteBtn);
     swipeContainer.append(swipeBgLeft, swipeBgRight, li);
 
-    // Swipe gestures (mobile)
+    // Swipe gestures (mobile) — only horizontal swipes, vertical scrolling never triggers actions
     let touchStartX = 0;
     let touchStartY = 0;
     let swiping = false;
@@ -934,14 +1003,14 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
         if (!directionLocked) {
             const absDx = Math.abs(dx);
             const absDy = Math.abs(dy);
-            // Need at least 25px total movement to decide
-            if (absDx > 25 || absDy > 15) {
-                // Must be clearly horizontal: dx > 2× dy
-                directionLocked = (absDx > absDy * 2 && absDx > 25) ? "h" : "v";
+            // Stricter horizontal detection: need much more horizontal than vertical
+            if (absDx > 30 || absDy > 10) {
+                // Must be clearly horizontal: dx > 3× dy and at least 30px
+                directionLocked = (absDx > absDy * 3 && absDx > 30) ? "h" : "v";
             }
         }
 
-        // If scrolling vertically, do nothing
+        // If scrolling vertically, do nothing — never interfere with scroll
         if (directionLocked !== "h") return;
 
         // Horizontal swipe confirmed
@@ -1090,24 +1159,33 @@ itemInput.addEventListener("input", () => {
 });
 
 // ──────────────────────────────────────────────
-// Suggestions while typing
+// Suggestions while typing (uses product bank + known products)
 // ──────────────────────────────────────────────
 function showSuggestions(text) {
     suggestions.innerHTML = "";
     if (text.length < 2) { suggestions.style.display = "none"; return; }
 
     const lower = text.toLowerCase();
-    const allNames = [...knownProducts.values()].map(v => v.text);
-    const matches = allNames
+
+    // Combine: known products from Firestore + static bank
+    const allNames = new Set();
+    for (const v of knownProducts.values()) allNames.add(v.text);
+    for (const p of PRODUCT_BANK) allNames.add(p);
+
+    const matches = [...allNames]
         .filter(p => p.toLowerCase().includes(lower))
         .sort((a, b) => {
             // Prioritize products that START with the typed text
             const aStarts = a.toLowerCase().startsWith(lower) ? 0 : 1;
             const bStarts = b.toLowerCase().startsWith(lower) ? 0 : 1;
             if (aStarts !== bStarts) return aStarts - bStarts;
+            // Then prioritize known products (already in list)
+            const aKnown = knownProducts.has(a.toLowerCase()) ? 0 : 1;
+            const bKnown = knownProducts.has(b.toLowerCase()) ? 0 : 1;
+            if (aKnown !== bKnown) return aKnown - bKnown;
             return a.localeCompare(b, "es");
         })
-        .slice(0, 8);
+        .slice(0, 10);
 
     if (matches.length === 0 || (matches.length === 1 && matches[0].toLowerCase() === lower)) {
         suggestions.style.display = "none";
@@ -1295,6 +1373,7 @@ function resetScanUI() {
     scanFileInput.value = "";
     detectedProducts = [];
     productsToConfirm = [];
+    productsToMark = [];
     scanAddAll.disabled = false;
     scanAddAll.style.display = "";
     scanAddAll.textContent = "✓ Añadir todos";
@@ -1366,7 +1445,7 @@ scanFileInput.addEventListener("change", async (e) => {
 });
 
 // ──────────────────────────────────────────────
-// Parse ticket text into product names
+// Parse ticket text into product names (enhanced with product bank)
 // ──────────────────────────────────────────────
 function parseTicket(rawText) {
     const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
@@ -1381,12 +1460,12 @@ function parseTicket(rawText) {
         /^(mercadona|lidl|carrefour|aldi|dia\b|eroski|alcampo|hipercor|bonpreu|condis|caprabo|consum)/i,
         /^(supermercado|s\.a\.|s\.l\.|sociedad|direc|www\.|http)/i,
         /^(descripci[oó]n|p[\.\s]*unit|unid|precio|imp[\.\s]*€)/i,
-        /^\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/,           // Fechas: 22/03/2022
-        /^\d{5,}/,                                      // Códigos largos
-        /^[\d\s.,€$%()]+$/,                             // Solo números/precios
-        /^[\*\-=_\.]{3,}$/,                             // Separadores
-        /^[A-Z]{1,3}\d{6,}/,                           // Códigos de barras
-        /^op\s*:/i,                                     // OP: 100020
+        /^\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/,
+        /^\d{5,}/,
+        /^[\d\s.,€$%()]+$/,
+        /^[\*\-=_\.]{3,}$/,
+        /^[A-Z]{1,3}\d{6,}/,
+        /^op\s*:/i,
     ];
 
     // Regex para línea de producto: "2 AGUA MINERAL  0,63  1,26"
@@ -1407,10 +1486,10 @@ function parseTicket(rawText) {
         // Intento 2: limpiar manualmente
         if (!name) {
             name = line
-                .replace(/\s+\d+[.,]\d{2}\s*[€]?\s*/g, " ")  // Quitar precios
-                .replace(/^\d+\s+/,                       "")   // Quitar cantidad "2 "
-                .replace(/\s*[—–\-]{2,}\s*/g,             "")   // Guiones largos
-                .replace(/\s*\d{2,}\s*$/,                 "")   // Números sueltos al final
+                .replace(/\s+\d+[.,]\d{2}\s*[€]?\s*/g, " ")
+                .replace(/^\d+\s+/,                       "")
+                .replace(/\s*[—–\-]{2,}\s*/g,             "")
+                .replace(/\s*\d{2,}\s*$/,                 "")
                 .replace(/\s{2,}/g,                       " ")
                 .trim();
         }
@@ -1436,6 +1515,9 @@ function parseTicket(rawText) {
 
         if (!name || name.length < 3) continue;
 
+        // Try to match against product bank + known products for better names
+        name = matchToProductBank(name);
+
         // Evitar duplicados
         if (!products.some(p => p.name.toLowerCase() === name.toLowerCase())) {
             products.push({ name, selected: true });
@@ -1443,6 +1525,99 @@ function parseTicket(rawText) {
     }
 
     return products;
+}
+
+/**
+ * Try to match an OCR-detected name to a known product from the bank or Firestore.
+ * Uses fuzzy matching: exact, contains, and Levenshtein distance.
+ */
+function matchToProductBank(ocrName) {
+    const lower = ocrName.toLowerCase().trim();
+
+    // 1) Exact match in product bank
+    if (_productBankMap.has(lower)) return _productBankMap.get(lower);
+
+    // 2) Exact match in known products (Firestore)
+    for (const [key, val] of knownProducts) {
+        if (key === lower) return val.text;
+    }
+
+    // 3) Product bank entry that contains or is contained by the OCR name
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const bankProduct of PRODUCT_BANK) {
+        const bankLower = bankProduct.toLowerCase();
+
+        // OCR name contains bank product name
+        if (lower.includes(bankLower) && bankLower.length > bestScore) {
+            bestMatch = bankProduct;
+            bestScore = bankLower.length;
+        }
+        // Bank product name contains OCR name
+        if (bankLower.includes(lower) && lower.length >= 4 && lower.length > bestScore * 0.8) {
+            if (!bestMatch || bankLower.length < bestMatch.length) {
+                bestMatch = bankProduct;
+                bestScore = lower.length;
+            }
+        }
+    }
+
+    if (bestMatch && bestScore >= 4) return bestMatch;
+
+    // 4) Also check known Firestore products
+    for (const [key, val] of knownProducts) {
+        if (lower.includes(key) && key.length > bestScore) {
+            bestMatch = val.text;
+            bestScore = key.length;
+        }
+        if (key.includes(lower) && lower.length >= 4) {
+            if (!bestMatch || key.length < bestMatch.length) {
+                bestMatch = val.text;
+                bestScore = lower.length;
+            }
+        }
+    }
+
+    if (bestMatch && bestScore >= 4) return bestMatch;
+
+    // 5) Fuzzy match: Levenshtein distance for short names (OCR errors)
+    if (lower.length >= 4) {
+        let closestDist = Infinity;
+        let closestName = null;
+        for (const bankProduct of PRODUCT_BANK) {
+            const bankLower = bankProduct.toLowerCase();
+            // Only compare similar-length names
+            if (Math.abs(bankLower.length - lower.length) > 3) continue;
+            const dist = levenshtein(lower, bankLower);
+            const threshold = Math.max(2, Math.floor(lower.length * 0.3));
+            if (dist < closestDist && dist <= threshold) {
+                closestDist = dist;
+                closestName = bankProduct;
+            }
+        }
+        if (closestName) return closestName;
+    }
+
+    return ocrName;
+}
+
+/**
+ * Simple Levenshtein distance
+ */
+function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = a[i-1] === b[j-1]
+                ? dp[i-1][j-1]
+                : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+        }
+    }
+    return dp[m][n];
 }
 
 // ──────────────────────────────────────────────
@@ -1530,39 +1705,48 @@ function renderScanResults(products) {
 
 // ──────────────────────────────────────────────
 // Add scanned products to Firestore (2-step: review → confirm)
+// Existing products → mark as purchased
+// New products → add to list
 // ──────────────────────────────────────────────
 let productsToConfirm = [];
+let productsToMark = [];
 
 scanAddAll.addEventListener("click", () => {
     const toAdd = detectedProducts.filter(p => p.selected && p.name.trim());
     if (toAdd.length === 0) return;
 
-    // Classify: new vs duplicates
+    // Classify: new vs existing (to mark as purchased)
     const newProducts = [];
-    const duplicates  = [];
+    const existingProducts = [];
     for (const p of toAdd) {
-        const isDup = knownProducts.has(p.name.trim().toLowerCase());
-        if (isDup) duplicates.push(p);
-        else newProducts.push(p);
+        const existing = knownProducts.get(p.name.trim().toLowerCase());
+        if (existing) {
+            existingProducts.push({ ...p, firestoreId: existing.id, alreadyChecked: existing.checked });
+        } else {
+            newProducts.push(p);
+        }
     }
 
     // Build summary HTML
     let html = "";
+    if (existingProducts.length > 0) {
+        html += `<p class="scan-summary-title match">🛒 Se marcarán como comprados (${existingProducts.length}):</p><ul class="scan-summary-list match">`;
+        for (const p of existingProducts) {
+            const icon = p.alreadyChecked ? "✅" : "🔄";
+            html += `<li>${icon} ${p.name}</li>`;
+        }
+        html += `</ul>`;
+    }
     if (newProducts.length > 0) {
-        html += `<p class="scan-summary-title new">✅ Se añadirán (${newProducts.length}):</p><ul class="scan-summary-list new">`;
+        html += `<p class="scan-summary-title new">➕ Se añadirán como comprados (${newProducts.length}):</p><ul class="scan-summary-list new">`;
         for (const p of newProducts) {
             const cat = guessCategory(p.name);
             html += `<li>${p.name} <span class="scan-summary-cat">→ ${cat}</span></li>`;
         }
         html += `</ul>`;
     }
-    if (duplicates.length > 0) {
-        html += `<p class="scan-summary-title dup">⚠️ Ya en la lista (${duplicates.length}):</p><ul class="scan-summary-list dup">`;
-        for (const p of duplicates) html += `<li>${p.name}</li>`;
-        html += `</ul>`;
-    }
-    if (newProducts.length === 0) {
-        html += `<p class="scan-summary-empty">No hay productos nuevos que añadir.</p>`;
+    if (newProducts.length === 0 && existingProducts.length === 0) {
+        html += `<p class="scan-summary-empty">No hay productos que procesar.</p>`;
     }
 
     scanSummary.innerHTML = html;
@@ -1571,31 +1755,46 @@ scanAddAll.addEventListener("click", () => {
 
     // Toggle buttons
     scanAddAll.style.display = "none";
-    if (newProducts.length > 0) {
+    const totalActions = newProducts.length + existingProducts.length;
+    if (totalActions > 0) {
         scanConfirmAdd.style.display = "";
-        scanConfirmAdd.textContent = `✓ Confirmar (${newProducts.length})`;
+        scanConfirmAdd.textContent = `✓ Confirmar (${totalActions})`;
         scanConfirmAdd.disabled = false;
     }
 
     productsToConfirm = newProducts;
+    productsToMark = existingProducts;
 });
 
 scanConfirmAdd.addEventListener("click", async () => {
-    if (productsToConfirm.length === 0) return;
+    if (productsToConfirm.length === 0 && productsToMark.length === 0) return;
 
     scanConfirmAdd.disabled = true;
-    scanConfirmAdd.textContent = "Añadiendo...";
+    scanConfirmAdd.textContent = "Procesando...";
 
-    const promises = productsToConfirm.map(p =>
-        addDoc(itemsRef, {
-            text: p.name,
-            category: guessCategory(p.name),
-            checked: false,
-            createdAt: serverTimestamp()
-        })
-    );
+    const promises = [];
+
+    // Mark existing products as purchased
+    for (const p of productsToMark) {
+        promises.push(toggleItem(p.firestoreId, true));
+    }
+
+    // Add new products as already purchased
+    for (const p of productsToConfirm) {
+        promises.push(
+            addDoc(itemsRef, {
+                text: p.name,
+                category: guessCategory(p.name),
+                checked: true,
+                createdAt: serverTimestamp(),
+                checkedAt: serverTimestamp(),
+                purchaseHistory: [Timestamp.now()]
+            })
+        );
+    }
 
     await Promise.all(promises);
     productsToConfirm = [];
+    productsToMark = [];
     closeScanModal();
 });
