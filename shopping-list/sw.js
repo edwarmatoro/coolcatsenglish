@@ -4,7 +4,7 @@ const ASSETS = [
     "/shopping-list/index.html",
     "/shopping-list/styles.css",
     "/shopping-list/app.js",
-    "/images/favicon.png"
+    "/shopping-list/favicon.png"
 ];
 
 // Install: cache shell assets
