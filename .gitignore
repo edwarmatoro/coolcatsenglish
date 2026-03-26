@@ -1,2 +1,11 @@
 .DS_Store
 **/.DS_Store
+
+# Firebase service account key (NEVER commit this)
+serviceAccountKey.json
+**/serviceAccountKey.json
+
+# Node
+node_modules/
+**/node_modules/
+package-lock.json

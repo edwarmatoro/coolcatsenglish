@@ -17,12 +17,16 @@ import {
     updateDoc,
     onSnapshot,
     doc,
+    getDoc,
+    getDocs,
+    setDoc,
     serverTimestamp,
     deleteField,
     arrayUnion,
     Timestamp,
     query,
-    orderBy
+    orderBy,
+    where
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
 // ──────────────────────────────────────────────
@@ -38,13 +42,10 @@ const firebaseConfig = {
 };
 
 // ──────────────────────────────────────────────
-// Allowed users
+// Multi-user: lista asignada vía Firestore
+// Colección "invites": { code, listId, label }
+// Colección "userLists": { uid → { listId, label } }
 // ──────────────────────────────────────────────
-const ALLOWED_UIDS = [
-    "mOaWpDNNlgTd2CAkQ59uck8Q1Uc2",
-    "cEcLQyRnSVcsZ7Tuk5pl0jlHwbu2",
-    "8y0qijBnTeflWPbJV23tY5FfFe63"
-];
 
 // ──────────────────────────────────────────────
 // Categories (ordered for display)
@@ -227,17 +228,25 @@ function guessCategory(productName) {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
 const db          = getFirestore(firebaseApp);
-const itemsRef    = collection(db, "items");
+
+// itemsRef es dinámico — se inicializa en startListening() según el usuario
+let itemsRef = null;
 
 // ──────────────────────────────────────────────
 // DOM references
 // ──────────────────────────────────────────────
-const authScreen     = document.getElementById("authScreen");
-const appContent     = document.getElementById("appContent");
-const googleSignIn   = document.getElementById("googleSignIn");
-const clearAuthCache = document.getElementById("clearAuthCache");
-const signOutBtn     = document.getElementById("signOutBtn");
-const authError      = document.getElementById("authError");
+const authScreen      = document.getElementById("authScreen");
+const appContent      = document.getElementById("appContent");
+const googleBox       = document.getElementById("googleBox");
+const googleSignIn    = document.getElementById("googleSignIn");
+const clearAuthCache  = document.getElementById("clearAuthCache");
+const signOutBtn      = document.getElementById("signOutBtn");
+const authError       = document.getElementById("authError");
+const inviteBox       = document.getElementById("inviteBox");
+const inviteCodeInput = document.getElementById("inviteCodeInput");
+const inviteSubmit    = document.getElementById("inviteSubmit");
+const inviteSignOut   = document.getElementById("inviteSignOut");
+const inviteError     = document.getElementById("inviteError");
 const addForm         = document.getElementById("addForm");
 const itemInput       = document.getElementById("itemInput");
 const categorySelect  = document.getElementById("categorySelect");
@@ -351,24 +360,176 @@ if (window.matchMedia("(display-mode: standalone)").matches) {
 // ──────────────────────────────────────────────
 // Auth state
 // ──────────────────────────────────────────────
-onAuthStateChanged(auth, (user) => {
-    if (user && ALLOWED_UIDS.includes(user.uid)) {
+function showGoogleScreen() {
+    authScreen.style.display = "flex";
+    googleBox.style.display  = "flex";
+    inviteBox.style.display  = "none";
+    appContent.style.display = "none";
+}
+
+function showInviteScreen() {
+    authScreen.style.display = "flex";
+    googleBox.style.display  = "none";
+    inviteBox.style.display  = "flex";
+    appContent.style.display = "none";
+    inviteError.textContent  = "";
+    inviteCodeInput.value    = "";
+}
+
+let currentListId = null;
+let currentLabel  = null;
+
+function startApp(listId, label) {
+    currentListId = listId;
+    currentLabel  = label;
+    itemsRef = collection(db, "lists", listId, "items");
+    const listLabel = document.getElementById("listLabel");
+    if (listLabel) listLabel.textContent = label;
+    authScreen.style.display = "none";
+    appContent.style.display = "block";
+    authError.textContent    = "";
+    startListening();
+    preloadOCR();
+}
+
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
         currentUser = user;
-        authScreen.style.display = "none";
-        appContent.style.display = "block";
-        authError.textContent    = "";
-        startListening();
-        preloadOCR(); // Pre-load Tesseract in background while user browses
+        // Check if this user is already registered in userLists
+        const userDoc = await getDoc(doc(db, "userLists", user.uid));
+        if (userDoc.exists()) {
+            const { listId, label } = userDoc.data();
+            startApp(listId, label);
+        } else {
+            // New user — ask for invite code
+            showInviteScreen();
+        }
     } else {
         currentUser = null;
-        appContent.style.display = "none";
-        authScreen.style.display = "flex";
-        if (user && !ALLOWED_UIDS.includes(user.uid)) {
-            authError.textContent = "Acceso denegado para " + user.email;
-            signOut(auth);
-        }
+        itemsRef = null;
         if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+        showGoogleScreen();
     }
+});
+
+// ──────────────────────────────────────────────
+// Invite code submission
+// ──────────────────────────────────────────────
+inviteSubmit.addEventListener("click", () => validateInviteCode());
+inviteCodeInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") validateInviteCode();
+});
+
+async function validateInviteCode() {
+    const code = inviteCodeInput.value.trim().toUpperCase();
+    if (!code) {
+        inviteError.textContent = "Introduce el código de invitación.";
+        return;
+    }
+    inviteError.textContent    = "";
+    inviteSubmit.disabled      = true;
+    inviteSubmit.textContent   = "Comprobando...";
+
+    try {
+        const inviteDoc = await getDoc(doc(db, "invites", code));
+        if (!inviteDoc.exists()) {
+            inviteError.textContent  = "Código no válido. Comprueba que está bien escrito.";
+            inviteSubmit.disabled    = false;
+            inviteSubmit.textContent = "Unirme a la lista";
+            return;
+        }
+        const { listId, label } = inviteDoc.data();
+        // Check member limit before registering
+        const memberCount = await countMembers(listId);
+        if (memberCount >= MAX_MEMBERS) {
+            inviteError.textContent  = `Esta lista ya está llena (máximo ${MAX_MEMBERS} miembros).`;
+            inviteSubmit.disabled    = false;
+            inviteSubmit.textContent = "Unirme a la lista";
+            return;
+        }
+        // Register user and consume the invite code (single-use)
+        await setDoc(doc(db, "userLists", currentUser.uid), { listId, label });
+        await deleteDoc(doc(db, "invites", code));
+        startApp(listId, label);
+    } catch (err) {
+        inviteError.textContent  = "Error al validar: " + err.message;
+        inviteSubmit.disabled    = false;
+        inviteSubmit.textContent = "Unirme a la lista";
+    }
+}
+
+inviteSignOut.addEventListener("click", () => signOut(auth));
+
+const MAX_MEMBERS = 5;
+
+async function countMembers(listId) {
+    const snap = await getDocs(
+        query(collection(db, "userLists"), where("listId", "==", listId))
+    );
+    return snap.size;
+}
+
+// ──────────────────────────────────────────────
+// Generate invite code (one active per list)
+// ──────────────────────────────────────────────
+const inviteBtn          = document.getElementById("inviteBtn");
+const inviteModal        = document.getElementById("inviteModal");
+const inviteModalCode    = document.getElementById("inviteModalCode");
+const inviteModalCopy    = document.getElementById("inviteModalCopy");
+const inviteModalClose   = document.getElementById("inviteModalClose");
+const inviteModalWhatsapp = document.getElementById("inviteModalWhatsapp");
+
+inviteBtn.addEventListener("click", async () => {
+    inviteBtn.disabled = true;
+    try {
+        const memberCount = await countMembers(currentListId);
+        if (memberCount >= MAX_MEMBERS) {
+            alert(`La lista ya tiene ${memberCount} miembros (máximo ${MAX_MEMBERS}). Elimina a alguien antes de invitar.`);
+            return;
+        }
+
+        // Delete any existing pending codes for this list
+        const existing = await getDocs(
+            query(collection(db, "invites"), where("listId", "==", currentListId))
+        );
+        for (const d of existing.docs) await deleteDoc(d.ref);
+
+        // Generate new code: 8 random uppercase alphanumeric chars
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        const code = Array.from(
+            { length: 8 },
+            () => chars[Math.floor(Math.random() * chars.length)]
+        ).join("");
+
+        await setDoc(doc(db, "invites", code), { listId: currentListId, label: currentLabel });
+
+        inviteModalCode.textContent = code;
+        inviteModalCopy.textContent = "Copiar";
+        inviteModal.style.display = "flex";
+    } catch (err) {
+        console.error("Error generando código:", err);
+    } finally {
+        inviteBtn.disabled = false;
+    }
+});
+
+inviteModalCopy.addEventListener("click", () => {
+    navigator.clipboard.writeText(inviteModalCode.textContent).then(() => {
+        inviteModalCopy.textContent = "¡Copiado!";
+        setTimeout(() => inviteModalCopy.textContent = "Copiar", 2000);
+    });
+});
+
+inviteModalWhatsapp.addEventListener("click", () => {
+    const code = inviteModalCode.textContent;
+    const text = encodeURIComponent(
+        `Te invito a unirte a nuestra lista de la compra 🛒\nUsa este código al entrar: *${code}*\nhttps://coolcatsenglish.com/shopping-list/`
+    );
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+});
+
+inviteModalClose.addEventListener("click", () => {
+    inviteModal.style.display = "none";
 });
 
 googleSignIn.addEventListener("click", async () => {

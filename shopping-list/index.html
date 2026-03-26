@@ -17,7 +17,8 @@
 
     <!-- Auth screen -->
     <div class="pin-screen" id="authScreen">
-        <div class="pin-box">
+        <!-- Google sign-in -->
+        <div class="pin-box" id="googleBox">
             <div class="pin-icon">&#128722;</div>
             <h2>Lista de la Compra</h2>
             <p>Inicia sesión para acceder</p>
@@ -28,14 +29,29 @@
             <button id="clearAuthCache" class="btn-clear-cache">¿Problemas para entrar? Pulsa aquí</button>
             <p class="pin-error" id="authError"></p>
         </div>
+
+        <!-- Invite code (shown after sign-in for new users) -->
+        <div class="pin-box" id="inviteBox" style="display:none;">
+            <div class="pin-icon">&#128273;</div>
+            <h2>Código de invitación</h2>
+            <p>Introduce el código que te han compartido para unirte a una lista.</p>
+            <input type="text" id="inviteCodeInput" class="invite-input" placeholder="Ej: FAMILIA123" autocomplete="off" spellcheck="false">
+            <button id="inviteSubmit" class="btn-google" style="width:100%;justify-content:center;">Unirme a la lista</button>
+            <button id="inviteSignOut" class="btn-clear-cache">Cancelar y salir</button>
+            <p class="pin-error" id="inviteError"></p>
+        </div>
     </div>
 
     <!-- App (hidden until signed in) -->
     <div class="app" id="appContent" style="display:none;">
         <header class="app-header">
             <button class="btn-install" id="installBtn" style="display:none;" title="Instalar app">&#128242; Instalar</button>
-            <h1>&#128722; Lista de la Compra</h1>
+            <div class="header-title">
+                <h1>&#128722; Lista de la Compra</h1>
+                <span id="listLabel" class="list-label"></span>
+            </div>
             <div class="header-actions">
+                <button class="btn-invite" id="inviteBtn" title="Invitar a alguien">&#128279;</button>
                 <button class="btn-theme" id="themeToggle" title="Cambiar tema">&#9728;&#65039;</button>
                 <button class="btn-lock" id="signOutBtn" title="Cerrar sesión">&#128682;</button>
             </div>
@@ -83,6 +99,20 @@
         </main>
     </div>
 
+    <!-- Invite modal -->
+    <div class="invite-modal" id="inviteModal" style="display:none;">
+        <div class="invite-modal-box">
+            <h3>&#128279; Código de invitación</h3>
+            <p>Comparte este código con quien quieras invitar. Solo funciona una vez.</p>
+            <div class="invite-modal-code" id="inviteModalCode"></div>
+            <div class="invite-modal-actions">
+                <button id="inviteModalWhatsapp" class="btn-scan-add btn-whatsapp">&#128362; WhatsApp</button>
+                <button id="inviteModalCopy" class="btn-scan-add">Copiar</button>
+            </div>
+            <button id="inviteModalClose" class="btn-scan-cancel" style="width:100%;">Cerrar</button>
+        </div>
+    </div>
+
     <!-- Scan modal -->
     <div class="scan-modal" id="scanModal" style="display:none;">
         <div class="scan-box">
@@ -122,6 +152,6 @@
     </div>
 
     <!-- Firebase SDK -->
-    <script type="module" src="app.js?v=46"></script>
+    <script type="module" src="app.js?v=48"></script>
 </body>
 </html>
