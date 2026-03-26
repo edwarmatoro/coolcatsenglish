@@ -1413,11 +1413,11 @@ async function toggleItem(id, checked) {
     } else {
         data.checkedAt = deleteField();
     }
-    await updateDoc(doc(db, "items", id), data);
+    await updateDoc(doc(itemsRef, id), data);
 }
 
 async function removeItem(id) {
-    await deleteDoc(doc(db, "items", id));
+    await deleteDoc(doc(itemsRef, id));
 }
 
 // ──────────────────────────────────────────────
