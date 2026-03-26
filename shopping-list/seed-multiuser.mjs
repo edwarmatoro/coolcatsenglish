@@ -23,21 +23,21 @@ const USERS = [
         uid: "mOaWpDNNlgTd2CAkQ59uck8Q1Uc2",
         lists: [
             { listId: "family", label: "🏠 Lista familiar" },
-            { listId: "pytp",   label: "🎵 PYTP" },       // ← ajusta el emoji/nombre si quieres
+            { listId: "pytp",   label: "🛒 ColBcn" },       // ← ajusta el emoji/nombre si quieres
         ]
     },
     {
         uid: "cEcLQyRnSVcsZ7Tuk5pl0jlHwbu2",
         lists: [
             { listId: "family", label: "🏠 Lista familiar" },
-            { listId: "pytp",   label: "🎵 PYTP" },
+            { listId: "pytp",   label: "🛒 ColBcn" },
         ]
     },
     {
         uid: "8y0qijBnTeflWPbJV23tY5FfFe63",
         lists: [
             { listId: "family", label: "🏠 Lista familiar" },
-            { listId: "pytp",   label: "🎵 PYTP" },
+            { listId: "pytp",   label: "🛒 ColBcn" },
         ]
     },
 ];
@@ -45,7 +45,7 @@ const USERS = [
 // ── Códigos de invitación ────────────────────────────────────────
 const INVITE_CODES = [
     { code: "FAMILIA2025", listId: "family", label: "🏠 Lista familiar" },
-    { code: "PYTP2025",    listId: "pytp",   label: "🎵 PYTP" },
+    { code: "PYTP2025",    listId: "pytp",   label: "🛒 ColBcn" },
 ];
 
 async function seed() {
