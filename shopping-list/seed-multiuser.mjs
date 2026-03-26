@@ -30,12 +30,14 @@ const USERS = [
         uid: "cEcLQyRnSVcsZ7Tuk5pl0jlHwbu2",
         lists: [
             { listId: "family", label: "🏠 Lista familiar" },
+            { listId: "pytp",   label: "🎵 PYTP" },
         ]
     },
     {
         uid: "8y0qijBnTeflWPbJV23tY5FfFe63",
         lists: [
             { listId: "family", label: "🏠 Lista familiar" },
+            { listId: "pytp",   label: "🎵 PYTP" },
         ]
     },
 ];
