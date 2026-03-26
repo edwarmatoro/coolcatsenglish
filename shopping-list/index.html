@@ -48,7 +48,11 @@
             <button class="btn-install" id="installBtn" style="display:none;" title="Instalar app">&#128242; Instalar</button>
             <div class="header-title">
                 <h1>&#128722; Lista de la Compra</h1>
-                <span id="listLabel" class="list-label"></span>
+                <button id="listSwitcherBtn" class="list-switcher-btn">
+                    <span id="listLabel" class="list-label"></span>
+                    <span id="listSwitcherArrow" style="display:none;"> &#9660;</span>
+                </button>
+                <div id="listSwitcherMenu" class="list-switcher-menu" style="display:none;"></div>
             </div>
             <div class="header-actions">
                 <button class="btn-invite" id="inviteBtn" title="Invitar a alguien">&#128279;</button>
@@ -152,6 +156,6 @@
     </div>
 
     <!-- Firebase SDK -->
-    <script type="module" src="app.js?v=49"></script>
+    <script type="module" src="app.js?v=50"></script>
 </body>
 </html>

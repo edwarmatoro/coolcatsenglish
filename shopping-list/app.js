@@ -376,37 +376,99 @@ function showInviteScreen() {
     inviteCodeInput.value    = "";
 }
 
-let currentListId = null;
-let currentLabel  = null;
+let currentListId  = null;
+let currentLabel   = null;
+let availableLists = []; // [{ listId, label }]
 
-function startApp(listId, label) {
-    currentListId = listId;
-    currentLabel  = label;
-    itemsRef = collection(db, "lists", listId, "items");
-    const listLabel = document.getElementById("listLabel");
-    if (listLabel) listLabel.textContent = label;
+// Support old format { listId, label } and new format { lists, listIds }
+function resolveUserLists(data) {
+    if (data.lists && Array.isArray(data.lists)) return data.lists;
+    return [{ listId: data.listId, label: data.label }];
+}
+
+function startApp(lists, preferListId = null) {
+    availableLists = lists;
+
+    // Restore last used list or use preferred, fallback to first
+    const saved      = localStorage.getItem(`activeList_${currentUser.uid}`);
+    const preferred  = preferListId || saved;
+    const active     = (preferred && lists.find(l => l.listId === preferred)) || lists[0];
+
+    applyActiveList(active.listId, active.label);
+
     authScreen.style.display = "none";
     appContent.style.display = "block";
     authError.textContent    = "";
-    startListening();
     preloadOCR();
 }
+
+function applyActiveList(listId, label) {
+    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+
+    currentListId = listId;
+    currentLabel  = label;
+    itemsRef      = collection(db, "lists", listId, "items");
+
+    localStorage.setItem(`activeList_${currentUser.uid}`, listId);
+
+    document.getElementById("listLabel").textContent = label;
+
+    // Show/hide switcher arrow
+    const arrow = document.getElementById("listSwitcherArrow");
+    if (arrow) arrow.style.display = availableLists.length > 1 ? "inline" : "none";
+
+    // Clear rendered list
+    shoppingList.querySelectorAll(".category-group").forEach(el => el.remove());
+    renderedItems.clear();
+    lastDocs = [];
+
+    startListening();
+}
+
+// ── List switcher ───────────────────────────────
+const listSwitcherBtn  = document.getElementById("listSwitcherBtn");
+const listSwitcherMenu = document.getElementById("listSwitcherMenu");
+
+listSwitcherBtn.addEventListener("click", () => {
+    if (availableLists.length <= 1) return;
+    const open = listSwitcherMenu.style.display !== "none";
+    listSwitcherMenu.style.display = open ? "none" : "block";
+    if (!open) {
+        listSwitcherMenu.innerHTML = "";
+        availableLists.forEach(({ listId, label }) => {
+            const btn = document.createElement("button");
+            btn.className = "list-switcher-item" + (listId === currentListId ? " active" : "");
+            btn.textContent = label;
+            btn.addEventListener("click", () => {
+                listSwitcherMenu.style.display = "none";
+                if (listId !== currentListId) applyActiveList(listId, label);
+            });
+            listSwitcherMenu.appendChild(btn);
+        });
+    }
+});
+
+document.addEventListener("click", (e) => {
+    if (!listSwitcherBtn.contains(e.target)) {
+        listSwitcherMenu.style.display = "none";
+    }
+});
+// ────────────────────────────────────────────────
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        // Check if this user is already registered in userLists
         const userDoc = await getDoc(doc(db, "userLists", user.uid));
         if (userDoc.exists()) {
-            const { listId, label } = userDoc.data();
-            startApp(listId, label);
+            const lists = resolveUserLists(userDoc.data());
+            startApp(lists);
         } else {
-            // New user — ask for invite code
             showInviteScreen();
         }
     } else {
-        currentUser = null;
-        itemsRef = null;
+        currentUser    = null;
+        itemsRef       = null;
+        availableLists = [];
         if (unsubscribe) { unsubscribe(); unsubscribe = null; }
         showGoogleScreen();
     }
@@ -447,10 +509,23 @@ async function validateInviteCode() {
             inviteSubmit.textContent = "Unirme a la lista";
             return;
         }
-        // Register user and consume the invite code (single-use)
-        await setDoc(doc(db, "userLists", currentUser.uid), { listId, label });
-        await deleteDoc(doc(db, "invites", code));
-        startApp(listId, label);
+        // Register user (or add list) and consume the invite code (single-use)
+        const existingDoc = await getDoc(doc(db, "userLists", currentUser.uid));
+        if (existingDoc.exists()) {
+            await updateDoc(doc(db, "userLists", currentUser.uid), {
+                lists:   arrayUnion({ listId, label }),
+                listIds: arrayUnion(listId)
+            });
+            await deleteDoc(doc(db, "invites", code));
+            startApp([...resolveUserLists(existingDoc.data()), { listId, label }], listId);
+        } else {
+            await setDoc(doc(db, "userLists", currentUser.uid), {
+                lists:   [{ listId, label }],
+                listIds: [listId]
+            });
+            await deleteDoc(doc(db, "invites", code));
+            startApp([{ listId, label }], listId);
+        }
     } catch (err) {
         inviteError.textContent  = "Error al validar: " + err.message;
         inviteSubmit.disabled    = false;
@@ -464,7 +539,7 @@ const MAX_MEMBERS = 5;
 
 async function countMembers(listId) {
     const snap = await getDocs(
-        query(collection(db, "userLists"), where("listId", "==", listId))
+        query(collection(db, "userLists"), where("listIds", "array-contains", listId))
     );
     return snap.size;
 }
