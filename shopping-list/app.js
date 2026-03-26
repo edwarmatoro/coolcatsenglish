@@ -673,7 +673,7 @@ function renderRepeatChips() {
         addAllBtn.disabled = true;
         addAllBtn.textContent = "Añadiendo...";
         for (const item of candidates) {
-            await updateDoc(doc(db, "items", item.id), { checked: false });
+            await updateDoc(doc(itemsRef, item.id), { checked: false });
         }
         frequentPanel.style.display = "none";
         showFrequentBtn.classList.remove("active");
@@ -704,7 +704,7 @@ function renderRepeatChips() {
         chip.title = `Volver a poner "${item.text}" como pendiente`;
 
         chip.addEventListener("click", async () => {
-            await updateDoc(doc(db, "items", item.id), { checked: false });
+            await updateDoc(doc(itemsRef, item.id), { checked: false });
             chip.classList.add("just-added");
             chip.disabled = true;
             setTimeout(() => {
@@ -1184,13 +1184,13 @@ async function saveNote(id, noteText, noteDisplay, noteBtn) {
         noteDisplay.style.display = "";
         noteBtn.classList.add("has-note");
         noteBtn.title = "Editar nota";
-        await updateDoc(doc(db, "items", id), { note: noteText });
+        await updateDoc(doc(itemsRef, id), { note: noteText });
     } else {
         noteDisplay.textContent = "";
         noteDisplay.style.display = "none";
         noteBtn.classList.remove("has-note");
         noteBtn.title = "Añadir nota";
-        await updateDoc(doc(db, "items", id), { note: deleteField() });
+        await updateDoc(doc(itemsRef, id), { note: deleteField() });
     }
 }
 
@@ -1215,7 +1215,7 @@ function startEditName(id, currentText, label, textWrapper) {
         if (newText && newText !== currentText) {
             label.textContent = newText;
             const newCat = guessCategory(newText);
-            await updateDoc(doc(db, "items", id), { text: newText, category: newCat });
+            await updateDoc(doc(itemsRef, id), { text: newText, category: newCat });
         }
     };
 
