@@ -77,9 +77,35 @@
     <link rel="icon" href="images/favicon.png">
     <link rel="icon" href="images/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="images/favicon.png">
-    <link rel="stylesheet" href="styles.css?v=mobile-photos-400px-fix">
+    <link rel="stylesheet" href="styles.css?v=2">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- FAQ Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Ofreces clase de prueba?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. Hacemos un diagnóstico gratuito de 15–20 minutos, online o presencial (Horta‑Guinardó), para definir tu nivel y objetivos."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Son presenciales u online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ambas opciones: presencial en Horta‑Guinardó (Barcelona) u online con la misma metodología conversacional."
+          }
+        }
+      ]
+    }
+    </script>
+
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-3C9GJJYLDK"></script>
     <script>
@@ -100,11 +126,12 @@
                     </picture>
                     <h1>CoolCats English</h1>
                 </div>
-                <h1 class="site-title">CoolCats English</h1>
+                <p class="site-title">CoolCats English</p>
                 <ul class="nav-menu" id="nav-menu">
                     <li><a href="#servicios">Servicios</a></li>
                     <li><a href="#acerca">Acerca</a></li>
                     <li><a href="#cursos">Cursos</a></li>
+                    <li><a href="#faq">FAQ</a></li>
                     <li><a href="#contacto">Contacto</a></li>
                 </ul>
                 <div class="hamburger">
@@ -297,6 +324,20 @@
             </div>
         </section>
 
+        <section id="faq" class="faq">
+            <div class="container">
+                <h2>Preguntas Frecuentes</h2>
+                <details>
+                    <summary>¿Ofreces clase de prueba?</summary>
+                    <p>Sí. Hacemos un diagnóstico gratuito de 15–20 minutos, online o presencial (Horta‑Guinardó), para definir tu nivel y objetivos.</p>
+                </details>
+                <details>
+                    <summary>¿Son presenciales u online?</summary>
+                    <p>Ambas opciones: presencial en Horta‑Guinardó (Barcelona) u online con la misma metodología conversacional.</p>
+                </details>
+            </div>
+        </section>
+
         <section id="contacto" class="contact">
             <div class="container">
                 <h2>Contáctanos</h2>
@@ -305,26 +346,26 @@
                         <h3>Información de Contacto</h3>
                         <div class="contact-item">
                             <span class="icon">📧</span>
-                            <p><a href="mailto:info@coolcatsenglish.com" style="color: var(--primary-color); text-decoration: none;">info@coolcatsenglish.com</a></p>
+                            <p><a href="mailto:info@coolcatsenglish.com" class="contact-link">info@coolcatsenglish.com</a></p>
                         </div>
                         <div class="contact-item">
                             <span class="icon">📞</span>
-                            <p><a href="tel:+34659097455" style="color: var(--primary-color); text-decoration: none;">+34 659 09 74 55</a></p>
+                            <p><a href="tel:+34659097455" class="contact-link">+34 659 09 74 55</a></p>
                         </div>
                         <div class="contact-item">
-                            <img src="images/whatsapp-official.svg" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;">
-                            <p><a href="https://wa.me/34659097455?utm_source=website&utm_medium=contact&utm_campaign=whatsapp_contact" target="_blank" style="color: var(--primary-color); text-decoration: none;">WhatsApp</a></p>
+                            <img src="images/whatsapp-official.svg" alt="WhatsApp" class="contact-icon-img">
+                            <p><a href="https://wa.me/34659097455?utm_source=website&utm_medium=contact&utm_campaign=whatsapp_contact" target="_blank" class="contact-link">WhatsApp</a></p>
                         </div>
                         <div class="contact-item">
                             <span class="icon">📍</span>
                             <p>Baixada de la Plana, 46</p>
                             <p>Horta-Guinardó, 08032 Barcelona</p>
-                            <p><a href="https://maps.google.com/?q=CoolCats+Baixada+de+la+Plana,+46,+Horta-Guinardó,+08032+Barcelona" target="_blank" style="color: var(--primary-color); text-decoration: none;">Ver en Google Maps</a></p>
+                            <p><a href="https://maps.google.com/?q=CoolCats+Baixada+de+la+Plana,+46,+Horta-Guinardó,+08032+Barcelona" target="_blank" class="contact-link">Ver en Google Maps</a></p>
                         </div>
                     </div>
                     <form class="contact-form" id="contactForm" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/">
                         <input type="hidden" name="form-name" value="contact" />
-                        <div class="form-group" style="display: none;">
+                        <div class="form-group form-honeypot">
                             <input name="bot-field" />
                         </div>
                         <div class="form-group">
@@ -342,20 +383,6 @@
             </div>
         </section>
     </main>
-
-    <section id="faq" class="faq">
-        <div class="container">
-            <h2>Preguntas Frecuentes</h2>
-            <details>
-                <summary>¿Ofreces clase de prueba?</summary>
-                <p>Sí. Hacemos un diagnóstico gratuito de 15–20 minutos, online o presencial (Horta‑Guinardó), para definir tu nivel y objetivos.</p>
-            </details>
-            <details>
-                <summary>¿Son presenciales u online?</summary>
-                <p>Ambas opciones: presencial en Horta‑Guinardó (Barcelona) u online con la misma metodología conversacional.</p>
-            </details>
-        </div>
-    </section>
 
     <footer class="footer">
         <div class="container">
@@ -381,30 +408,5 @@
     </footer>
 
     <script src="script.js"></script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "¿Ofreces clase de prueba?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Sí. Hacemos un diagnóstico gratuito de 15–20 minutos, online o presencial (Horta‑Guinardó), para definir tu nivel y objetivos."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "¿Son presenciales u online?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Ambas opciones: presencial en Horta‑Guinardó (Barcelona) u online con la misma metodología conversacional."
-          }
-        }
-      ]
-    }
-    </script>
 </body>
 </html> 
