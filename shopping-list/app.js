@@ -1163,6 +1163,17 @@ function createItemElement(id, text, checked, purchaseHistory, note) {
         directionLocked = null;
     });
 
+    li.addEventListener("touchcancel", () => {
+        li.style.transition = "transform 0.25s ease";
+        li.style.transform = "";
+        swipeBgLeft.style.opacity = 0;
+        swipeBgRight.style.opacity = 0;
+        swipeBgLeft.classList.remove("ready");
+        swipeBgRight.classList.remove("ready");
+        swiping = false;
+        directionLocked = null;
+    });
+
     return swipeContainer;
 }
 
